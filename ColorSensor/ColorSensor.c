@@ -1,7 +1,6 @@
-// Libraries to include:
 #include <libpynq.h>
-#include<pinmap.h>
-#include<switchbox.h>
+#include <pinmap.h>
+#include <switchbox.h>
 
 // Pin numbers related to color sensor:
 #define S0_PIN 5
@@ -40,9 +39,8 @@ void setup() {
 
 // Main method to be run:
 void loop() {
-
     // Run the code for testing:
-    for (i = 1; i <= 5; i++) {
+    for (int i = 1; i <= 5; i++) {
         int red_val = process_red_value();
         int green_val = process_green_value();
         int blue_val = process_blue_value();
@@ -52,7 +50,6 @@ void loop() {
         Serial.println("b = " + String(blue_val));
         Serial.println("____________________________");
     }
-
 }
 
 // Get red value:
@@ -60,7 +57,7 @@ int process_red_value() {
     gpio_set_level(S2_PIN, GPIO_LEVEL_LOW);
     gpio_set_level(S3_PIN, GPIO_LEVEL_LOW);
 
-    int analog_value = pulseIn(LOW);
+    int analog_value = pulseIn(OUT_PIN, GPIO_LEVEL_LOW, 1000000L);
 
     sleep_msec(100);
     return analog_value;
@@ -71,7 +68,7 @@ int process_green_value() {
     gpio_set_level(S2_PIN, GPIO_LEVEL_HIGH);
     gpio_set_level(S3_PIN, GPIO_LEVEL_HIGH);
 
-    int analog_value = pulseIn(LOW);
+    int analog_value = pulseIn(OUT_PIN, GPIO_LEVEL_LOW, 1000000L);
 
     sleep_msec(100);
     return analog_value;
@@ -82,43 +79,42 @@ int process_blue_value() {
     gpio_set_level(S2_PIN, GPIO_LEVEL_LOW);
     gpio_set_level(S3_PIN, GPIO_LEVEL_HIGH);
 
-    int analog_value = pulseIn(LOW);
+    int analog_value = pulseIn(OUT_PIN, GPIO_LEVEL_LOW, 1000000L);
 
     sleep_msec(100);
     return analog_value;
 }
 
-// For pulseIn:
-unsigned long pulseIn(uint8_t state, unsigned long timeout = 1000000L) {
-    
+// Measure pulse duration on a specific pin
+int pulseIn(uint8_t pin, gpio_level_t state, unsigned long timeout) {
     // Initialize PWM
     pwm_init(PWM0, timeout);
-    
+
     // Wait for the specified state
-    unsigned long startTime = millis();
-    while (digitalRead(OUT_PIN) != state) {
-        if (millis() - startTime >= timeout) {
+    unsigned long start_time = timer_get_ticks();
+    while (gpio_get_level(pin) != state) {
+        if (timer_get_ticks() - start_time >= timeout) {
             // Timeout reached
             pwm_destroy(PWM0); // Clean up PWM
             return 0; // Return 0 to indicate timeout
         }
     }
-    
+
     // Measure pulse length
-    unsigned long pulseStartTime = micros();
-    while (digitalRead(OUT_PIN) == state) {
-        if (micros() - pulseStartTime >= timeout) {
+    unsigned long pulse_start_time = timer_get_ticks();
+    while (gpio_get_level(pin) == state) {
+        if (timer_get_ticks() - pulse_start_time >= timeout) {
             // Timeout reached
             pwm_destroy(PWM0); // Clean up PWM
             return 0; // Return 0 to indicate timeout
         }
     }
-    unsigned long pulseLength = micros() - pulseStartTime;
-    
+    unsigned long pulse_length = timer_get_ticks() - pulse_start_time;
+
     // Clean up PWM
     pwm_destroy(PWM0);
-    
-    return pulseLength;
+
+    return pulse_length;
 }
 
 // Run the code:
