@@ -20,14 +20,14 @@ int main() {
     uart_init(UART0);
     uart_reset_fifos(UART0);
 
-    //setup steppers
+    //setup steppers///
     //stepper_init()
     //stepper_enable()
     //stepper_set_speed(..., ...)           //set initial speed 
     //stepper_set_steps(..., ...)           //set initial steps
     ///////////////////
 
-    //define variables
+    //define variables//
     int l_speed = 0, r_speed = 0;
     int l_steps = 0, r_steps = 0;
     //..
