@@ -29,7 +29,7 @@ def on_message(client, userdata, message):
     print("Received message: " + str(message.payload.decode("utf-8")) + "| on topic " + message.topic)
     
 # Setup MQTT client and callbacks
-client = mqtt.Client("Example", clean_session=False)
+client = mqtt.Client("Example", clean_session=True)
 client.on_connect = on_connect
 client.on_message = on_message
 
@@ -43,9 +43,9 @@ try:
     msg_count = 0
     while True:                                                             #publish messages infinitelly
         if mode_0_or_1 == 1:                                                #testting
-            message = f"Hello world, this is msg {msg_count}"
+            message = f"l_speed {msg_count}"
         else:                                                               #actual message
-            message = f"Goodbye world, this is msg {msg_count}"
+            message = f"r_speed {msg_count}"
             print("Send message: %s" %message)                              #check what message was sent
         client.publish(topic_publish, message)
         msg_count += 1
