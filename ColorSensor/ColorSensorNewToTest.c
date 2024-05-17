@@ -229,7 +229,7 @@ int bestRedValue() {
     if (measurements % 2 == 0) {
         return red_values[measurements / 2];
     } else {
-        return green_values[(measurements + 1) / 2];
+        return red_values[(measurements + 1) / 2];
     }
 }
 
