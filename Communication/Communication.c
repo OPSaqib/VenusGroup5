@@ -21,9 +21,9 @@ void uart_send_array(const int uart, uint8_t *buf, uint32_t l) {
 }
 
 void compareMSG(char *msg, int *l_speed, int *r_speed, int *l_steps, int *r_steps) {
-    // Use sscanf(msg, "%s %i", str_in_msg, int_in_msg)    ---> see: https://www.tutorialspoint.com/c_standard_library/c_function_sscanf.htm
+    // Use sscanf(msg, "%s %i", str_in_msg, int_in_msg) ---> see: https://www.tutorialspoint.com/c_standard_library/c_function_sscanf.htm
     int int_in_msg;
-    char str_in_msg[8];                                          //the instruction contains 7 letters (0 to 6 --> 7 == space for the NULL)   ===>> NEED to check!!!
+    char str_in_msg[8];                                         //the instruction contains 7 letters (0 to 6 --> 7 == space for the NULL)   ===>> NEED to check!!!
     sscanf(msg, "%s %i", str_in_msg, &int_in_msg);              //reads the words and numbers from the message separatelly and sets them to the correct variable type
     if (strcmp(str_in_msg, "l_speed") == 0)
     {
@@ -72,10 +72,10 @@ int main() {
         if (uart_has_data(UART0)) {
             // Recieve message
             uint8_t size = 0;
-            uart_read_array(UART0, &size, 4);                           //first part of the message is the size of the message
+            uart_read_array(UART0, &size, 4);                           // First part of the message is the size of the message
             unsigned char array[size];
-            uart_read_array(UART0, &array[0], size);                    //second part of the message is the message itself
-            printf("Data recieved: %.*s\n", size, array);               //print for check!
+            uart_read_array(UART0, &array[0], size);                    // Second part of the message is the message itself
+            printf("Data recieved: %.*s\n", size, array);               // Print for check!
             
             // Convert message to different var
             char msg[size];
@@ -86,7 +86,7 @@ int main() {
                 i++;
             }
 
-            // Process message and convert to motors instructions
+            // Process message and convert to motors instructions!
             compareMSG(msg, &l_speed, &r_speed, &l_steps, &r_steps);
 
             //prints for check:
@@ -120,7 +120,7 @@ int main() {
             //.....
             //////////
 
-            /*enter code for steppers here*/
+        /*enter code for steppers here*/
     }
 
     //need to be included so the steppers can move!
