@@ -14,10 +14,16 @@ void uart_read_array(const int uart, uint8_t *buf, uint8_t l) {
     }
 }
 
-/*void compareMSG(char *msg, int *l_speed, int *r_speed, int *l_steps, int *r_steps) {
+void uart_send_array(const int uart, uint8_t *buf, uint32_t l) {
+    for (uint8_t x = 0; x < l; x++) {
+        uart_send(uart, buf[x]);
+    }
+}
+
+void compareMSG(char *msg, int *l_speed, int *r_speed, int *l_steps, int *r_steps) {
     // Use sscanf(msg, "%s %i", str_in_msg, int_in_msg)    ---> see: https://www.tutorialspoint.com/c_standard_library/c_function_sscanf.htm
     int int_in_msg;
-    char str_in_msg[7];                                         //the instruction contains 7 letters (0 to 6 --> 7 == space for the NULL)   ===>> NEED to check!!!
+    char str_in_msg[8];                                          //the instruction contains 7 letters (0 to 6 --> 7 == space for the NULL)   ===>> NEED to check!!!
     sscanf(msg, "%s %i", str_in_msg, &int_in_msg);              //reads the words and numbers from the message separatelly and sets them to the correct variable type
     if (strcmp(str_in_msg, "l_speed") == 0)
     {
@@ -25,7 +31,7 @@ void uart_read_array(const int uart, uint8_t *buf, uint8_t l) {
     }
     else if (strcmp(str_in_msg, "l_steps") == 0)
     {
-        *l_steps = = int_in_msg;
+        *l_steps = int_in_msg;
     }
     else if (strcmp(str_in_msg, "r_speed") == 0)
     {
@@ -36,7 +42,7 @@ void uart_read_array(const int uart, uint8_t *buf, uint8_t l) {
         *r_steps = int_in_msg;
     }
     return;
-}*/
+}
 
 int main() {
     // Start pynq
@@ -55,8 +61,8 @@ int main() {
     ///////////////////
 
     // Define variables
-    //int l_speed = 0, r_speed = 0;
-    //int l_steps = 0, r_steps = 0;
+    int l_speed = 0, r_speed = 0;
+    int l_steps = 0, r_steps = 0;
     //.....
     ///////////////////
 
@@ -79,44 +85,42 @@ int main() {
                 msg[i] = array[i];
                 i++;
             }
-            printf("Message: '%s'\n", msg);                             //print for check!
 
             // Process message and convert to motors instructions
-            /*compareMSG(msg, &l_speed, &r_speed, &l_steps, &r_steps);
+            compareMSG(msg, &l_speed, &r_speed, &l_steps, &r_steps);
 
             //prints for check:
             printf("l_speed = %i\n", l_speed);
             printf("l_steps = %i\n", l_steps);
             printf("r_speed = %i\n", r_speed);
-            printf("r_steps = %i\n", r_steps);*/
+            printf("r_steps = %i\n", r_steps);
+            printf("\n");
+
+            if (uart_has_space(UART0))
+            {
+                //sending back:
+                uint8_t byte[] = "Hello!\n";                        // Define string as an array of type byte!
             
-            /*enter the rest of the code here*/
+                // Send length and than string (byte)
+                uint32_t num = (sizeof(byte)*8);                    // Size of the string in bytes (in 32bit format)
+                uint8_t length[4];
+
+                // Extract each byte
+                length[0] = (uint8_t)(num & 0xFF);                  // Least significant byte
+                length[1] = (uint8_t)((num >> 8) & 0xFF);           // Second byte
+                length[2] = (uint8_t)((num >> 16) & 0xFF);          // Third byte
+                length[3] = (uint8_t)((num >> 24) & 0xFF);          // Most significant byte
+            
+                uart_send_array(UART0, &length[0], 4);              
+                uart_send_array(UART0, &byte[0], num);
+            }
+        } 
+        
+        /*enter the rest of the code here*/
             //.....
             //////////
 
             /*enter code for steppers here*/
-        }
-        
-        //UART send data
-        //send data regarding the rocks and/or clift and mountains
-        uint8_t byte[] = "Hello!";                        // Define string as an array of type byte! ==> for later, might need to use sprintf();
-        uint8_t length; // = strlen(byte);                   // Need to send length of the message first (dunno if this is the correct initialisation of length)
-        // Send length and than string (byte)
-        int s = 0;
-        for (int k = 0; byte[k] != '\0'; k++)
-        {
-            s++;
-        }
-        length = i;
-        printf("Length: %i\n", length);
-        uart_send(UART0, length);
-        s = 0;
-        while (byte[s] != '\0') {
-            uart_send(UART0, byte[s]);                               
-            printf("Sending message: '%c'\n", byte[s]);        
-            printf("\n");
-            s++;
-        }
     }
 
     //need to be included so the steppers can move!
