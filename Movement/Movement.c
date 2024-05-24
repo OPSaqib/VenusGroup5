@@ -6,52 +6,85 @@
 #include <stdint.h>
 #include <stepper.h>
 
+void enable_stepper() {
+  stepper_init();
+  stepper_enable();
+}
+
+void disable_stepper() {
+  stepper_destroy();
+}
+
 //NOTE: stepper_set_speed(left, right) and stepper_steps(left, right) ie left tire is left tuple and 
 //right tire is the right tuple
 
 //turn the robot right by: right speed X, steps Y, then left steps Y/2, speed X*2 (so goes 1/2 as fast)
 void right() {
-  stepper_set_speed(3072, 6144);
-  stepper_steps(-400, -1600); //CAN BE MODIFIED
+  enable_stepper();
+  stepper_set_speed(6144, 3072);
+  stepper_steps(-1400, -200); //CAN BE MODIFIED
   while (!stepper_steps_done()) {}; //Wait for stepper steps to finish
+  disable_stepper();
 }
 
+//TODO:
 //turn the robot left by: left speed X, steps Y, then right steps Y/2, speed X*2 (so goes 1/2 as fast)
 void left() {
-  stepper_set_speed(6144, 3072);
-  stepper_steps(-1600, -400); //CAN BE MODIFIED
+  enable_stepper();
+  stepper_set_speed(3072, 6144);
+  stepper_steps(-200, -1350); //CAN BE MODIFIED
   while (!stepper_steps_done()) {}; //Wait for stepper steps to finish
+  disable_stepper();
+}
+
+//NOT REQUIRED:
+void make_left_slightly() {
+  enable_stepper();
+  stepper_set_speed(3072, 6144);
+  stepper_steps(-200, -400); //CAN BE MODIFIED
+  while (!stepper_steps_done()) {}; //Wait for stepper steps to finish
+  disable_stepper();
+}
+
+//NOT REQUIRED:
+void make_right_slightly() {
+  enable_stepper();
+  stepper_set_speed(6144, 3072);
+  stepper_steps(-150, -50); //CAN BE MODIFIED
+  while (!stepper_steps_done()) {}; //Wait for stepper steps to finish
+  disable_stepper();
 }
 
 void forwards() {
-  stepper_set_speed(6144, 6144);
+  enable_stepper();
+  stepper_set_speed(3072, 3072);
   stepper_steps(-200, -200); //CAN BE MODIFIED
   while (!stepper_steps_done()) {}; //Wait for stepper steps to finish
+  disable_stepper();
 }
 
 int main(void) {
   pynq_init();
   // Initialize the stepper driver.
-  stepper_init();
-  // Apply power to the stepper motors.
-  stepper_enable();
-  
-  //RUN THE ROBOT
-  //right();
-  //sleep_msec(100);
-  //forwards();
-  //left();
-  //RUN THE ROBOT
 
-  //right();
-
-  //left();
-  //sleep_msec(100);
+  // Now do the movements required
   forwards();
-  sleep_msec(5000);
+  sleep_msec(2000);
+  forwards();
+  sleep_msec(2000);
   left();
-
-  stepper_destroy();
+  //sleep_msec(2000);
+  //make_right_slightly();
+  sleep_msec(2000);
+  forwards();
+  sleep_msec(2000);
+  forwards();
+  sleep_msec(2000);
+  forwards();
+  //sleep_msec(2000);
+  //left();
+  //sleep_msec(2000);
+  //forwards();
   pynq_destroy();
 
   return EXIT_SUCCESS;
