@@ -8,16 +8,13 @@
 #include <pinmap.h>
 #include <switchbox.h>
 #include <sys/time.h>
-#include <libpynq.h>
 #include <iic.h>
 #include "vl53l0x.h"
-#include <stdio.h>
+#include <string.h>
 #include <arm_shared_memory_system.h>
 #include <json-c/json.h>
 #include <json-c/json_object.h>
-#include <libpynq.h>
 #include <platform.h>
-#include <stdint.h>
 #include <stepper.h>
 
 //ColorSensor init variables:
@@ -43,9 +40,22 @@ int distanceSensorB = 0;
 //
 
 //Algorithm init:
+#define MAX_COORDINATES 100
 int x = 0; //store current x co-ordinate
 int y = 0; //store current y co-ordinate
 
+//Store the visited co-ordinates:
+typedef struct {
+    int x;
+    int y;
+} VisitedCoordinates;
+
+VisitedCoordinates visitedCoordinates[MAX_COORDINATES];
+int numElements = 0; //globally store how many elements entered
+
+//ex to add an element do: visitedCoordinates[numElements] = (VisitedCoordinates){x, y};
+//Replace x,y with coordinate of elemet you want to add
+//Then don't forget to do: numElements++;
 
 //COLORSENSOR:
 
@@ -76,8 +86,8 @@ void setupColorSensor() {
     gpio_set_level(IO_A0, GPIO_LEVEL_HIGH);
     gpio_set_level(IO_A1, GPIO_LEVEL_LOW);
 
-    uart_init(UART0);
-    uart_reset_fifos(UART0);
+    //uart_init(UART0);
+    //uart_reset_fifos(UART0);
 
     adc_init();
 }
@@ -226,7 +236,7 @@ int bestRedValue() {
     if (measurements % 2 == 0) {
         return red_values[measurements / 2];
     } else {
-        return green_values[(measurements + 1) / 2];
+        return green_values[(measurements + 1) / 2];   //shoudn't there be red_values[]??
     }
 }
 
@@ -247,7 +257,9 @@ int bestBlueValue() {
         return blue_values[(measurements + 1) / 2];
     }
 }
-
+ void setCertainColour(){
+    
+ }
 void updateColourSensorValues() {
     get_rgb_values(measurements);
     sortRGBArrays();
@@ -255,6 +267,7 @@ void updateColourSensorValues() {
     red = bestRedValue();
     blue = bestBlueValue();
     green = bestGreenValue();
+    setCertainColour();
 }
 
 //NOW DISTANCE SENSOR:
@@ -372,6 +385,7 @@ void forwards() {
   enable_stepper();
   stepper_set_speed(3072, 3072);
   stepper_steps(-200, -200); //CAN BE MODIFIED
+  
   while (!stepper_steps_done()) {}; //Wait for stepper steps to finish
   disable_stepper();
 }
@@ -395,22 +409,143 @@ void left() {
   disable_stepper();
 }
 
+//COMMUNICATION:
+//NOTE: for sending, use string of type: uint8_t byte[]
+void setupCommunication() {
+    //set UART pins
+    switchbox_set_pin(IO_AR0, SWB_UART0_RX);
+    switchbox_set_pin(IO_AR1, SWB_UART0_TX);
+    uart_init(UART0);
+    uart_reset_fifos(UART0);
+}
+
+void uart_send_array(const int uart, uint8_t *buf, uint32_t l) {
+    for (uint8_t x = 0; x < l; x++) {
+        uart_send(uart, buf[x]);
+    }
+}
+
+int communication_send(uint8_t byte[]) {
+    if (uart_has_space(UART0))
+    {
+        //uint8_t byte[] = "Hello!\n";                      // Define string as an array of type uint8_t
+        //might need to use strcpy(byte, "Hello!") or sprintf(byte, "Hello!") or sprintf(byte, "Hello! & number %i", some_int) etc.
+
+        // Send length and than string (byte)
+        uint32_t num = (sizeof(byte)*8);                    // Size of the string in bytes (in 32bit format)
+        uint8_t length[4];
+        length[0] = (uint8_t)(num & 0xFF);              
+        length[1] = (uint8_t)((num >> 8) & 0xFF);          
+        length[2] = (uint8_t)((num >> 16) & 0xFF);         
+        length[3] = (uint8_t)((num >> 24) & 0xFF);          
+            
+        uart_send_array(UART0, &length[0], 4);              
+        uart_send_array(UART0, &byte[0], num);
+        return 1;                                           //return 1 == send success
+    } else 
+    {
+        return 0;                                           //return 0 == send fail ---> try sending again
+    }    
+}
+
+void updateCoordinate() {
+    visitedCoordinates[numElements] = (VisitedCoordinates){x, y};
+    numElements = numElements + 1;
+}
+
 //For calling this do:
 //NOW CALL THE METHODS, ADD A MSC DELAY (sleep_msec(100)) ie between calling of methods
 
 //ALGORITHM MAIN PART STARTS HERE:
 
+const char* investigateCoordinate() {
+    char* result;
+    result = (char*)malloc(sizeof(char)); 
+    updateColourSensorValues();
+    updateDistanceSensorA();
+    updateDistanceSensorB();
+
+    if (distanceSensorA<250) {//if the distance sensor in front senses the hill
+        strcpy(result, "h");
+    }
+    if ((distanceSensorB<50 &&distanceSensorB>20)||(!(red==0&&green==0&&blue==0)&& !(red==255&&green==255&&blue==))) {//rock
+        strcpy(result, "r");
+    }
+    if (red==0&&green==0&&blue==0) {//black tape or cliff
+        strcpy(result, "b");
+    }
+    if (red==255&&green==255&&blue==255) { // an empty point which is white surface
+        strcpy(result, "Nothing"); 
+    }
+
+    return result;
+}
+
+void forward_y_increasing() {
+    forwards();
+    sleep_msec(100);
+    y = y + 1;
+    updateCoordinate();
+}
+
+void forward_y_decreasing() {
+    forwards();
+    sleep_msec(100);
+    y = y - 1;
+    updateCoordinate();
+}
+
+void yplus_direction_movement() {
+    char* coordinateDetails = investigateCoordinate();
+    
+    if (coordinateDetails == "Nothing") {
+        void forward_y_increasing();
+    } else {
+        //STORE SOMETHING DETECTED AT CURRENT COORDINATE AHEAD IN A STRUCT
+        right();
+        x = x + 1;
+        y = y + 1;
+        updateCoordinate();
+        right();
+        y = y - 1;
+        updateCoordinate();
+        yminus_direction_movement();
+    }
+}
+
+void yminus_direction_movement() {
+    char*coordinateDetails = investigateCoordinate();
+
+     if (coordinateDetails == "Nothing") {
+        void forward_y_increasing();
+    } else {
+        //STORE SOMETHING DETECTED AT CURRENT COORDINATE AHEAD IN A STRUCT
+        left();
+        x = x + 1;
+        y = y - 1;
+        updateCoordinate();
+        right();
+        y = y + 1;
+        updateCoordinate();
+        yplus_direction_movement();
+    }
+}
+
+//method to check whether there is an unexplored region:
+//**WRITE THE METHOD HERE**//
+
 void alg() {
-    ///....//
+
 }
 
 //Actually execute everything:
 int main(void) {
     setupColorSensor();
     setupDistanceSensors();
+    setupCommunication();
+    //just do the init coordinate (0,0):
+    updateCoordinate();
     alg(); //RUN THE DESIRED ALGORITHM
     pynq_destroy();
     return EXIT_SUCCESS;
 }
-
-//Code
