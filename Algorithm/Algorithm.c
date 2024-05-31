@@ -53,6 +53,14 @@ typedef struct {
 VisitedCoordinates visitedCoordinates[MAX_COORDINATES];
 int numElements = 0; //globally store how many elements entered
 
+typedef struct {
+    int x;
+    int y;
+    char str[100]; // Allocate enough space for the string
+} CoordinateDetails;
+
+CoordinateDetails coordinateDetails[MAX_COORDINATES];
+
 //ex to add an element do: visitedCoordinates[numElements] = (VisitedCoordinates){x, y};
 //Replace x,y with coordinate of elemet you want to add
 //Then don't forget to do: numElements++;
@@ -448,9 +456,25 @@ int communication_send(uint8_t byte[]) {
     }    
 }
 
-void updateCoordinate() {
-    visitedCoordinates[numElements] = (VisitedCoordinates){x, y};
-    numElements = numElements + 1;
+// 0 = y_increasing (going up), 1 = y_decreasing (going down)
+void updateCoordinate(char situation, int z) {
+    if (numElements < MAX_COORDINATES) {
+        visitedCoordinates[numElements].x = x;
+        visitedCoordinates[numElements].y = y;
+
+        if (z == 0) {
+            coordinateDetails[numElements].x = x;
+            coordinateDetails[numElements].y = y + 1;
+            strcpy(coordinateDetails[numElements].str, situation);
+        } else {
+            coordinateDetails[numElements].x = x;
+            coordinateDetails[numElements].y = y - 1;
+            strcpy(coordinateDetails[numElements].str, situation);
+        }
+        numElements++;
+    } else {
+        printf("Error: Maximum number of coordinates reached.\n");
+    }
 }
 
 //For calling this do:
@@ -458,24 +482,43 @@ void updateCoordinate() {
 
 //ALGORITHM MAIN PART STARTS HERE:
 
-const char* investigateCoordinate() {
-    char* result;
-    result = (char*)malloc(sizeof(char)); 
+char investigateCoordinate() {
+    char result[100]; // Allocate enough memory for the longest expected string
+
+    // Update sensor values
     updateColourSensorValues();
     updateDistanceSensorA();
     updateDistanceSensorB();
 
-    if (distanceSensorA<250) {//if the distance sensor in front senses the hill
-        strcpy(result, "h");
+    if (distanceSensorA <= 250) {
+        strcpy(result, "HillAhead");
+    } 
+    else if (distanceSensorB <= 50) {
+        if (red > 0 && green > 0 && blue == 0) {
+            strcpy(result, "3x3BlockRed");
+        }
+        else if (red == 0 && green > 0 && blue > 0) {
+            strcpy(result, "3x3BlockBlue");
+        }
+        else if (red == 0 && green > 0 && blue == 0) {
+            strcpy(result, "3x3BlockGreen");
+        }
     }
-    if ((distanceSensorB<50 &&distanceSensorB>20)||(!(red==0&&green==0&&blue==0)&& !(red==255&&green==255&&blue==))) {//rock
-        strcpy(result, "r");
+    else if (distanceSensorB <= 100) {
+        if (red > 0 && green > 0 && blue == 0) {
+            strcpy(result, "6x6BlockRed");
+        }
+        else if (red == 0 && green > 0 && blue > 0) {
+            strcpy(result, "6x6BlockBlue");
+        }
+        else if (red == 0 && green > 0 && blue == 0) {
+            strcpy(result, "6x6BlockGreen");
+        }
     }
-    if (red==0&&green==0&&blue==0) {//black tape or cliff
-        strcpy(result, "b");
-    }
-    if (red==255&&green==255&&blue==255) { // an empty point which is white surface
-        strcpy(result, "Nothing"); 
+    else if (red > 0 && green == 0 && blue == 0) {
+        strcpy(result, "TapeOrCliff");
+    } else {
+        strcpy(result, "Nothing");
     }
 
     return result;
@@ -485,30 +528,45 @@ void forward_y_increasing() {
     forwards();
     sleep_msec(100);
     y = y + 1;
-    updateCoordinate();
 }
 
 void forward_y_decreasing() {
     forwards();
     sleep_msec(100);
     y = y - 1;
-    updateCoordinate();
 }
 
 void yplus_direction_movement() {
-    char* coordinateDetails = investigateCoordinate();
+    char coordinateDetails = investigateCoordinate();
     
     if (coordinateDetails == "Nothing") {
+        checkUnexploredRegion();
+        updateCoordinate(coordinateDetails, 0);
         void forward_y_increasing();
+    }
+    else if (coordinateDetails == "3x3BlockRed" || coordinateDetails == "3x3BlockBlue" 
+        || coordinateDetails == "3x3BlockGreen" || coordinateDetails == "6x6BlockRed" 
+        || coordinateDetails == "6x6BlockBlue" || coordinateDetails == "6x6BlockGreen") {
+            right();
+            x = x + 1;
+            y = y + 1;
+            updateCoordinate(coordinateDetails, 0);
+            left();
+            y = y + 1;
+            updateCoordinate(coordinateDetails, 0);
+            left();
+            x = x - 1;
+            updateCoordinate(coordinateDetails, 0);
+            yplus_direction_movement(); //continue with forward movement
     } else {
-        //STORE SOMETHING DETECTED AT CURRENT COORDINATE AHEAD IN A STRUCT
+        checkUnexploredRegionUpwards();
         right();
         x = x + 1;
         y = y + 1;
-        updateCoordinate();
+        updateCoordinate(coordinateDetails, 0);
         right();
         y = y - 1;
-        updateCoordinate();
+        updateCoordinate(coordinateDetails, 0);
         yminus_direction_movement();
     }
 }
@@ -516,26 +574,59 @@ void yplus_direction_movement() {
 void yminus_direction_movement() {
     char*coordinateDetails = investigateCoordinate();
 
-     if (coordinateDetails == "Nothing") {
+    if (coordinateDetails == "Nothing") {
+        checkUnexploredRegionDownwards();
+        updateCoordinate(coordinateDetails, 1);
         void forward_y_increasing();
+    } else if (coordinateDetails == "3x3BlockRed" || coordinateDetails == "3x3BlockBlue" 
+        || coordinateDetails == "3x3BlockGreen" || coordinateDetails == "6x6BlockRed" 
+        || coordinateDetails == "6x6BlockBlue" || coordinateDetails == "6x6BlockGreen") {
+            left();
+            x = x + 1;
+            y = y - 1;
+            updateCoordinate(coordinateDetails, 1);
+            right();
+            y = y - 1;
+            updateCoordinate(coordinateDetails, 1);
+            right();
+            x = x - 1;
+            updateCoordinate(coordinateDetails, 1);
+            yminus_direction_movement(); //continue with forward movement
     } else {
-        //STORE SOMETHING DETECTED AT CURRENT COORDINATE AHEAD IN A STRUCT
+        checkUnexploredRegion();
         left();
         x = x + 1;
         y = y - 1;
-        updateCoordinate();
+        updateCoordinate(coordinateDetails, 1);
         right();
         y = y + 1;
-        updateCoordinate();
+        updateCoordinate(coordinateDetails, 1);
         yplus_direction_movement();
     }
 }
 
-//method to check whether there is an unexplored region:
-//**WRITE THE METHOD HERE**//
+//**To Be Finished**(MAY BE DITCHED IF DEEMEND UNECESSARY)//
+void checkUnexploredRegionUpwards() {
+    for (int i = 0; i < numElements; i++) {
+        int test;
+        int test2;
+        test = visitedCoordinates[i].x;
+        test2 = visitedCoordinates[i].y;
+    }
+}
+
+//**To Be Finished**(MAY BE DITCHED IF DEEMEND UNECESSARY)//
+void checkUnexploredRegionDownwards() {
+    for (int i = 0; i < numElements; i++) {
+        int test;
+        int test2;
+        test = visitedCoordinates[i].x;
+        test2 = visitedCoordinates[i].y;
+    }
+}
 
 void alg() {
-
+    yplus_direction_movement();
 }
 
 //Actually execute everything:
