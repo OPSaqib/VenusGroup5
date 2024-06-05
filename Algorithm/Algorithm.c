@@ -417,45 +417,6 @@ void left() {
   disable_stepper();
 }
 
-//COMMUNICATION:
-//NOTE: for sending, use string of type: uint8_t byte[]
-void setupCommunication() {
-    //set UART pins
-    switchbox_set_pin(IO_AR0, SWB_UART0_RX);
-    switchbox_set_pin(IO_AR1, SWB_UART0_TX);
-    uart_init(UART0);
-    uart_reset_fifos(UART0);
-}
-
-void uart_send_array(const int uart, uint8_t *buf, uint32_t l) {
-    for (uint8_t x = 0; x < l; x++) {
-        uart_send(uart, buf[x]);
-    }
-}
-
-int communication_send(uint8_t byte[]) {
-    if (uart_has_space(UART0))
-    {
-        //uint8_t byte[] = "Hello!\n";                      // Define string as an array of type uint8_t
-        //might need to use strcpy(byte, "Hello!") or sprintf(byte, "Hello!") or sprintf(byte, "Hello! & number %i", some_int) etc.
-
-        // Send length and than string (byte)
-        uint32_t num = (sizeof(byte)*8);                    // Size of the string in bytes (in 32bit format)
-        uint8_t length[4];
-        length[0] = (uint8_t)(num & 0xFF);              
-        length[1] = (uint8_t)((num >> 8) & 0xFF);          
-        length[2] = (uint8_t)((num >> 16) & 0xFF);         
-        length[3] = (uint8_t)((num >> 24) & 0xFF);          
-            
-        uart_send_array(UART0, &length[0], 4);              
-        uart_send_array(UART0, &byte[0], num);
-        return 1;                                           //return 1 == send success
-    } else 
-    {
-        return 0;                                           //return 0 == send fail ---> try sending again
-    }    
-}
-
 // 0 = y_increasing (going up), 1 = y_decreasing (going down)
 void updateCoordinate(char situation, int z) {
     if (numElements < MAX_COORDINATES) {
@@ -557,6 +518,9 @@ void yplus_direction_movement() {
             left();
             x = x - 1;
             updateCoordinate(coordinateDetails, 0);
+            right();
+            y = y + 1;
+            updateCoordinate(coordinateDetails, 0);
             yplus_direction_movement(); //continue with forward movement
     } else {
         checkUnexploredRegionUpwards();
@@ -591,7 +555,10 @@ void yminus_direction_movement() {
             right();
             x = x - 1;
             updateCoordinate(coordinateDetails, 1);
-            yminus_direction_movement(); //continue with forward movement
+            left();
+            y = y - 1;
+            updateCoordinate(coordinateDetails, 1);
+            yminus_direction_movement(); //continue with (backwards) movement
     } else {
         checkUnexploredRegion();
         left();
@@ -608,10 +575,8 @@ void yminus_direction_movement() {
 //**To Be Finished**(MAY BE DITCHED IF DEEMEND UNECESSARY)//
 void checkUnexploredRegionUpwards() {
     for (int i = 0; i < numElements; i++) {
-        int test;
-        int test2;
-        test = visitedCoordinates[i].x;
-        test2 = visitedCoordinates[i].y;
+        //if there exists a larger (x,y) tuple than anywhere else then we know we have missed a region 
+        //so far, missed region re-calculated by..
     }
 }
 
@@ -625,6 +590,72 @@ void checkUnexploredRegionDownwards() {
     }
 }
 
+//Send data to the map from the struct, stored in the struct:
+//typedef struct {
+    //int x;
+    //int y;
+    //char str[100]; // Allocate enough space for the string
+//} CoordinateDetails;
+//CoordinateDetails coordinateDetails[MAX_COORDINATES];
+//hence basically a 3 tuple array coordinateDetails({x, y, string})
+
+//Communication:
+//NOTE: For sending, use: sendData(string, number);
+//      Works for both string and number of variable length!
+//      Only send string and 1 number ---> can be modified to send more numbers!!!
+
+void setupCommunication() {
+    // Set UART pins
+    switchbox_set_pin(IO_AR0, SWB_UART0_RX);
+    switchbox_set_pin(IO_AR1, SWB_UART0_TX);
+
+    // Initialize UART
+    uart_init(UART0);
+    uart_reset_fifos(UART0);
+}
+
+void uart_send_array(const int uart, uint8_t *buf, uint32_t l) {
+    for (uint8_t x = 0; x < l; x++) {
+        uart_send(uart, buf[x]);
+    }
+}
+
+void sendData(char *string, int number) {
+    if(uart_has_space(UART0))
+    {
+        size_t number_length = snprintf(NULL, 0, "%d", number);
+        size_t byte_size = strlen(string) + number_length + 2;          // +2 for space (between string and #) and null terminator
+        uint8_t *byte = (uint8_t *)malloc(byte_size);
+        if (byte == NULL) {
+            printf("Memory allocation failed\n");                       // Error check for malloc --> try again if failed
+            sendData(string, number);                                   // Might cause errors...
+            return;
+        }
+        snprintf((char *)byte, byte_size, "%s %d", string, number);
+    
+        int byte_size_int = (int)byte_size;                             // Size of the message
+        uint32_t num = (byte_size_int*8);                               // Convert to bytes (in 32bit format)
+        uint8_t length[4];
+
+        // Extract each byte
+        length[0] = (uint8_t)(num & 0xFF);                              // Least significant byte
+        length[1] = (uint8_t)((num >> 8) & 0xFF);                       // Second byte
+        length[2] = (uint8_t)((num >> 16) & 0xFF);                      // Third byte
+        length[3] = (uint8_t)((num >> 24) & 0xFF);                      // Most significant byte
+            
+        uart_send_array(UART0, &length[0], 4);              
+        uart_send_array(UART0, &byte[0], num);
+
+        free(byte);
+        return;
+    } else 
+    {
+        sendData(string, number);                                       // Try again if uart is full and cannot send data!
+    }
+    return;
+}
+
+
 void alg() {
     yplus_direction_movement();
 }
@@ -634,8 +665,6 @@ int main(void) {
     setupColorSensor();
     setupDistanceSensors();
     setupCommunication();
-    //just do the init coordinate (0,0):
-    updateCoordinate();
     alg(); //RUN THE DESIRED ALGORITHM
     pynq_destroy();
     return EXIT_SUCCESS;
