@@ -373,6 +373,71 @@ void updateDistanceSensorB() {
     distanceSensorB = tofReadDistance(&sensorB);
 }
 
+//Send data to the map from the struct, stored in the struct:
+//typedef struct {
+    //int x;
+    //int y;
+    //char str[100]; // Allocate enough space for the string
+//} CoordinateDetails;
+//CoordinateDetails coordinateDetails[MAX_COORDINATES];
+//hence basically a 3 tuple array coordinateDetails({x, y, string})
+
+//Communication:
+//NOTE: For sending, use: sendData(string, number);
+//      Works for both string and number of variable length!
+//      Only send string and 1 number ---> can be modified to send more numbers!!!
+
+void setupCommunication() {
+    // Set UART pins
+    switchbox_set_pin(IO_AR0, SWB_UART0_RX);
+    switchbox_set_pin(IO_AR1, SWB_UART0_TX);
+
+    // Initialize UART
+    uart_init(UART0);
+    uart_reset_fifos(UART0);
+}
+
+void uart_send_array(const int uart, uint8_t *buf, uint32_t l) {
+    for (uint8_t x = 0; x < l; x++) {
+        uart_send(uart, buf[x]);
+    }
+}
+
+void sendData(char *string, int number) {
+    if(uart_has_space(UART0))
+    {
+        size_t number_length = snprintf(NULL, 0, "%d", number);
+        size_t byte_size = strlen(string) + number_length + 2;          // +2 for space (between string and #) and null terminator
+        uint8_t *byte = (uint8_t *)malloc(byte_size);
+        if (byte == NULL) {
+            printf("Memory allocation failed\n");                       // Error check for malloc --> try again if failed
+            sendData(string, number);                                   // Might cause errors...
+            return;
+        }
+        snprintf((char *)byte, byte_size, "%s %d", string, number);
+    
+        int byte_size_int = (int)byte_size;                             // Size of the message
+        uint32_t num = (byte_size_int*8);                               // Convert to bytes (in 32bit format)
+        uint8_t length[4];
+
+        // Extract each byte
+        length[0] = (uint8_t)(num & 0xFF);                              // Least significant byte
+        length[1] = (uint8_t)((num >> 8) & 0xFF);                       // Second byte
+        length[2] = (uint8_t)((num >> 16) & 0xFF);                      // Third byte
+        length[3] = (uint8_t)((num >> 24) & 0xFF);                      // Most significant byte
+            
+        uart_send_array(UART0, &length[0], 4);              
+        uart_send_array(UART0, &byte[0], num);
+
+        free(byte);
+        return;
+    } else 
+    {
+        sendData(string, number);                                       // Try again if uart is full and cannot send data!
+    }
+    return;
+}
+
 //MOVEMENT:
 //NOTE: stepper_set_speed(left, right) and stepper_steps(left, right) ie left tire is left tuple and 
 //right tire is the right tuple
@@ -432,6 +497,10 @@ void updateCoordinate(char* situation, int z) {
             coordinateDetails[numElements].y = y - 1;
             strcpy(coordinateDetails[numElements].str, situation);
         }
+
+        //SEND TO THE SERVER:
+        //send x, y, situation to the server
+
         numElements++;
     } else {
         printf("Error: Maximum number of coordinates reached.\n");
@@ -598,71 +667,6 @@ void yminus_direction_movement() {
         updateCoordinate(coordinateDetails, 1);
         yplus_direction_movement();
     }
-}
-
-//Send data to the map from the struct, stored in the struct:
-//typedef struct {
-    //int x;
-    //int y;
-    //char str[100]; // Allocate enough space for the string
-//} CoordinateDetails;
-//CoordinateDetails coordinateDetails[MAX_COORDINATES];
-//hence basically a 3 tuple array coordinateDetails({x, y, string})
-
-//Communication:
-//NOTE: For sending, use: sendData(string, number);
-//      Works for both string and number of variable length!
-//      Only send string and 1 number ---> can be modified to send more numbers!!!
-
-void setupCommunication() {
-    // Set UART pins
-    switchbox_set_pin(IO_AR0, SWB_UART0_RX);
-    switchbox_set_pin(IO_AR1, SWB_UART0_TX);
-
-    // Initialize UART
-    uart_init(UART0);
-    uart_reset_fifos(UART0);
-}
-
-void uart_send_array(const int uart, uint8_t *buf, uint32_t l) {
-    for (uint8_t x = 0; x < l; x++) {
-        uart_send(uart, buf[x]);
-    }
-}
-
-void sendData(char *string, int number) {
-    if(uart_has_space(UART0))
-    {
-        size_t number_length = snprintf(NULL, 0, "%d", number);
-        size_t byte_size = strlen(string) + number_length + 2;          // +2 for space (between string and #) and null terminator
-        uint8_t *byte = (uint8_t *)malloc(byte_size);
-        if (byte == NULL) {
-            printf("Memory allocation failed\n");                       // Error check for malloc --> try again if failed
-            sendData(string, number);                                   // Might cause errors...
-            return;
-        }
-        snprintf((char *)byte, byte_size, "%s %d", string, number);
-    
-        int byte_size_int = (int)byte_size;                             // Size of the message
-        uint32_t num = (byte_size_int*8);                               // Convert to bytes (in 32bit format)
-        uint8_t length[4];
-
-        // Extract each byte
-        length[0] = (uint8_t)(num & 0xFF);                              // Least significant byte
-        length[1] = (uint8_t)((num >> 8) & 0xFF);                       // Second byte
-        length[2] = (uint8_t)((num >> 16) & 0xFF);                      // Third byte
-        length[3] = (uint8_t)((num >> 24) & 0xFF);                      // Most significant byte
-            
-        uart_send_array(UART0, &length[0], 4);              
-        uart_send_array(UART0, &byte[0], num);
-
-        free(byte);
-        return;
-    } else 
-    {
-        sendData(string, number);                                       // Try again if uart is full and cannot send data!
-    }
-    return;
 }
 
 void alg() {
