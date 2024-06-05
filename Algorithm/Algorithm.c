@@ -403,37 +403,34 @@ void uart_send_array(const int uart, uint8_t *buf, uint32_t l) {
     }
 }
 
-void sendData(char *string, int number) {
-    if(uart_has_space(UART0))
-    {
-        size_t number_length = snprintf(NULL, 0, "%d", number);
-        size_t byte_size = strlen(string) + number_length + 2;          // +2 for space (between string and #) and null terminator
+void sendData(char* string) {
+    if(uart_has_space(UART0)) {
+        size_t byte_size = strlen(string) + 1;  // Add 1 for the null terminator
         uint8_t *byte = (uint8_t *)malloc(byte_size);
         if (byte == NULL) {
-            printf("Memory allocation failed\n");                       // Error check for malloc --> try again if failed
-            sendData(string, number);                                   // Might cause errors...
+            printf("Memory allocation failed\n");
+            sendData(string);  // Try again if memory allocation fails
             return;
         }
-        snprintf((char *)byte, byte_size, "%s %d", string, number);
+        snprintf((char *)byte, byte_size, "%s", string);
     
-        int byte_size_int = (int)byte_size;                             // Size of the message
-        uint32_t num = (byte_size_int*8);                               // Convert to bytes (in 32bit format)
+        int byte_size_int = (int)byte_size;  // Size of the message
+        uint32_t num = (byte_size_int * 8);  // Convert to bytes (in 32bit format)
         uint8_t length[4];
 
         // Extract each byte
-        length[0] = (uint8_t)(num & 0xFF);                              // Least significant byte
-        length[1] = (uint8_t)((num >> 8) & 0xFF);                       // Second byte
-        length[2] = (uint8_t)((num >> 16) & 0xFF);                      // Third byte
-        length[3] = (uint8_t)((num >> 24) & 0xFF);                      // Most significant byte
+        length[0] = (uint8_t)(num & 0xFF);           // Least significant byte
+        length[1] = (uint8_t)((num >> 8) & 0xFF);    // Second byte
+        length[2] = (uint8_t)((num >> 16) & 0xFF);   // Third byte
+        length[3] = (uint8_t)((num >> 24) & 0xFF);   // Most significant byte
             
         uart_send_array(UART0, &length[0], 4);              
         uart_send_array(UART0, &byte[0], num);
 
         free(byte);
         return;
-    } else 
-    {
-        sendData(string, number);                                       // Try again if uart is full and cannot send data!
+    } else {
+        sendData(string);  // Try again if uart is full and cannot send data!
     }
     return;
 }
@@ -500,6 +497,20 @@ void updateCoordinate(char* situation, int z) {
 
         //SEND TO THE SERVER:
         //send x, y, situation to the server
+        // Calculate the length of the final string
+        int length = snprintf(NULL, 0, "X%dY%dS%s", x, y, situation);
+    
+        // Allocate memory for the final string (+1 for null terminator)
+        char* formattedString = (char*)malloc(length + 1);
+        if (formattedString == NULL) {
+            printf("Memory allocation failed\n");
+            return NULL;
+        }
+    
+        // Format the string
+        snprintf(formattedString, length + 1, "X%dY%dS%s", x, y, situation);
+
+        sendData(formattedString);
 
         numElements++;
     } else {
