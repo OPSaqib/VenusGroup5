@@ -39,37 +39,42 @@ def on_connect_B(client_B, userdata, flags, rc):
 # Callback when receiving a message from the MQTT broker            ===> what to do when message is recieved!
 def on_message(client, userdata, message):
     print("Received message: " + str(message.payload.decode("utf-8")) + "| on topic " + message.topic)
+    ##############
+    # logic here #
+    ##############
     
 # Setup MQTT clients and callbacks
-client_A = mqtt.Client("9", clean_session=True)
+client_A = mqtt.Client("9", clean_session=True)                             # use 9 for Student9
 client_A.on_connect = on_connect_A
 client_A.on_message = on_message
 
-client_B = mqtt.Client("81", clean_session=True)
-client_B.on_connect = on_connect_B
+client_B = mqtt.Client("81", clean_session=True)                            # use 81 for Student81
+client_B.on_connect = on_connect_B  
 client_B.on_message = on_message
 
 # Set the username and password
 client_A.username_pw_set(username_A, password_A)
 client_B.username_pw_set(username_B, password_B)
 
-# start the infinite loop
+# Start the infinite loop
 try:
-    client_A.connect(broker_address, port=1883)                               # connect to the broker
+    client_A.connect(broker_address, port=1883)                             # connect to the broker
     client_B.connect(broker_address, port=1883)
     
     client_A.loop_start()
     client_B.loop_start()
     time.sleep(1)
     msg_count = 0 
-    while True:                                                             # publish messages infinitelly 
-        if mode_0_or_1 == 1:                                                # testting
-            message = f"l_speed {msg_count}"
-        else:                                                               # actual message
-            message = f"r_speed {msg_count}"
-            print("Send message: %s" %message)                              # check what message was sent
-        client_A.publish(topic_publish_robot_A, message)                    # sends the same message for both robots ---> can be changed
-        client_B.publish(topic_publish_robot_B, message)
+    while True:                                                             # publish messages infinitelly!
+        if mode_0_or_1 == 1:                                                # testting communication w/ server
+            message = f"l_steps {msg_count}"
+        else:                                                               # actual message ==> use this to send to robot
+            message_A = f"r_speed {msg_count}"
+            message_B = f"l_speed {msg_count}"
+            print("Send message_A: %s" %message_A)                          # check what message was sent
+            print("Send message_B: %s\n" %message_B)
+        client_A.publish(topic_publish_robot_A, message_A)
+        client_B.publish(topic_publish_robot_B, message_B)
         msg_count += 1
         time.sleep(3)                                                       # wait b4 next message
 except Exception as error:
