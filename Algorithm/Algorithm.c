@@ -16,6 +16,7 @@
 #include <json-c/json_object.h>
 #include <platform.h>
 #include <stepper.h>
+#include <string.h> // Include for strcpy and strcmp
 
 //ColorSensor init variables:
 struct timespec start, current;
@@ -40,7 +41,7 @@ int distanceSensorB = 0;
 //
 
 //Algorithm init:
-#define MAX_COORDINATES 100
+#define MAX_COORDINATES 250
 int x = 0; //store current x co-ordinate
 int y = 0; //store current y co-ordinate
 
@@ -244,7 +245,7 @@ int bestRedValue() {
     if (measurements % 2 == 0) {
         return red_values[measurements / 2];
     } else {
-        return green_values[(measurements + 1) / 2];   //shoudn't there be red_values[]??
+        return red_values[(measurements + 1) / 2];
     }
 }
 
@@ -265,9 +266,7 @@ int bestBlueValue() {
         return blue_values[(measurements + 1) / 2];
     }
 }
- void setCertainColour(){
-    
- }
+
 void updateColourSensorValues() {
     get_rgb_values(measurements);
     sortRGBArrays();
@@ -275,7 +274,6 @@ void updateColourSensorValues() {
     red = bestRedValue();
     blue = bestBlueValue();
     green = bestGreenValue();
-    setCertainColour();
 }
 
 //NOW DISTANCE SENSOR:
@@ -443,8 +441,8 @@ void updateCoordinate(char situation, int z) {
 
 //ALGORITHM MAIN PART STARTS HERE:
 
-char investigateCoordinate() {
-    char result[100]; // Allocate enough memory for the longest expected string
+char* investigateCoordinate() {
+    static char result[100]; // Allocate enough memory for the longest expected string
 
     // Update sensor values
     updateColourSensorValues();
@@ -498,31 +496,33 @@ void forward_y_decreasing() {
 }
 
 void yplus_direction_movement() {
-    char coordinateDetails = investigateCoordinate();
+    char* coordinateDetails = investigateCoordinate();
     
-    if (coordinateDetails == "Nothing") {
+    if (strcmp(coordinateDetails, "Nothing") == 0) {
         checkUnexploredRegion();
         updateCoordinate(coordinateDetails, 0);
         void forward_y_increasing();
     }
-    else if (coordinateDetails == "3x3BlockRed" || coordinateDetails == "3x3BlockBlue" 
-        || coordinateDetails == "3x3BlockGreen" || coordinateDetails == "6x6BlockRed" 
-        || coordinateDetails == "6x6BlockBlue" || coordinateDetails == "6x6BlockGreen") {
+    else if ((strcmp(coordinateDetails, "3x3BlockRed") == 0) || (strcmp(coordinateDetails, "3x3BlockBlue") == 0) 
+        || (strcmp(coordinateDetails, "3x3BlockGreen") == 0) || (strcmp(coordinateDetails, "6x6BlockRed") == 0) 
+        || (strcmp(coordinateDetails, "6x6BlockBlue") == 0) || (strcmp(coordinateDetails, "6x6BlockGreen") == 0)) {
+            updateCoordinate(coordinateDetails, 0);
             right();
             x = x + 1;
             y = y + 1;
-            updateCoordinate(coordinateDetails, 0);
+            //updateCoordinate("Nothing", 0);
             left();
             y = y + 1;
-            updateCoordinate(coordinateDetails, 0);
+            //updateCoordinate("Nothing", 0);
             left();
             x = x - 1;
-            updateCoordinate(coordinateDetails, 0);
+            //updateCoordinate("Nothing", 0);
             right();
             y = y + 1;
-            updateCoordinate(coordinateDetails, 0);
+            //updateCoordinate("Nothing", 0);
+            
             yplus_direction_movement(); //continue with forward movement
-    } else {
+    } else { //is cliff or hole in ground
         checkUnexploredRegionUpwards();
         right();
         x = x + 1;
@@ -536,31 +536,32 @@ void yplus_direction_movement() {
 }
 
 void yminus_direction_movement() {
-    char*coordinateDetails = investigateCoordinate();
+    char* coordinateDetails = investigateCoordinate();
 
-    if (coordinateDetails == "Nothing") {
+    if (strcmp(coordinateDetails, "Nothing") == 0) {
         checkUnexploredRegionDownwards();
         updateCoordinate(coordinateDetails, 1);
         void forward_y_increasing();
-    } else if (coordinateDetails == "3x3BlockRed" || coordinateDetails == "3x3BlockBlue" 
-        || coordinateDetails == "3x3BlockGreen" || coordinateDetails == "6x6BlockRed" 
-        || coordinateDetails == "6x6BlockBlue" || coordinateDetails == "6x6BlockGreen") {
+    } else if ((strcmp(coordinateDetails, "3x3BlockRed") == 0) || (strcmp(coordinateDetails, "3x3BlockBlue") == 0) 
+        || (strcmp(coordinateDetails, "3x3BlockGreen") == 0) || (strcmp(coordinateDetails, "6x6BlockRed") == 0) 
+        || (strcmp(coordinateDetails, "6x6BlockBlue") == 0) || (strcmp(coordinateDetails, "6x6BlockGreen") == 0)) {
+            updateCoordinate(coordinateDetails, 1);
             left();
             x = x + 1;
             y = y - 1;
-            updateCoordinate(coordinateDetails, 1);
+            //updateCoordinate(coordinateDetails, 1);
             right();
             y = y - 1;
-            updateCoordinate(coordinateDetails, 1);
+            //updateCoordinate(coordinateDetails, 1);
             right();
             x = x - 1;
-            updateCoordinate(coordinateDetails, 1);
+            //updateCoordinate(coordinateDetails, 1);
             left();
             y = y - 1;
-            updateCoordinate(coordinateDetails, 1);
+            //updateCoordinate(coordinateDetails, 1);
             yminus_direction_movement(); //continue with (backwards) movement
     } else {
-        checkUnexploredRegion();
+        checkUnexploredRegionDownwards();
         left();
         x = x + 1;
         y = y - 1;
