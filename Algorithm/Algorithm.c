@@ -358,6 +358,8 @@ int setupDistanceSensors(void) {
     fflush(NULL); //Get some output even if the distance readings hang
     printf("\n");
 
+    return 0; //to indicate successfull running of the function
+
     //iic_destroy(IIC0);
     //pynq_destroy();
     //return EXIT_SUCCESS;
@@ -416,7 +418,7 @@ void left() {
 }
 
 // 0 = y_increasing (going up), 1 = y_decreasing (going down)
-void updateCoordinate(char situation, int z) {
+void updateCoordinate(char* situation, int z) {
     if (numElements < MAX_COORDINATES) {
         visitedCoordinates[numElements].x = x;
         visitedCoordinates[numElements].y = y;
@@ -495,11 +497,36 @@ void forward_y_decreasing() {
     y = y - 1;
 }
 
+//**To Be Finished**(MAY BE DITCHED IF DEEMEND UNECESSARY)//
+void checkUnexploredRegionUpwards() {
+    for (int i = 0; i < numElements; i++) {
+        //if there exists a larger (x,y) tuple than anywhere else then we know we have missed a region 
+        //so far, missed region re-calculated by..
+    }
+}
+
+//**To Be Finished**(MAY BE DITCHED IF DEEMEND UNECESSARY)//
+void checkUnexploredRegionDownwards() {
+    for (int i = 0; i < numElements; i++) {
+        //if there exists a larger (x,y) tuple than anywhere else then we know we have missed a region 
+        //so far, missed region re-calculated by..
+
+        //int test;
+        //int test2;
+        //test = visitedCoordinates[i].x;
+        //test2 = visitedCoordinates[i].y;
+    }
+}
+
+void yplus_direction_movement();
+
+void yminus_direction_movement();
+
 void yplus_direction_movement() {
     char* coordinateDetails = investigateCoordinate();
     
     if (strcmp(coordinateDetails, "Nothing") == 0) {
-        checkUnexploredRegion();
+        checkUnexploredRegionUpwards();
         updateCoordinate(coordinateDetails, 0);
         void forward_y_increasing();
     }
@@ -573,24 +600,6 @@ void yminus_direction_movement() {
     }
 }
 
-//**To Be Finished**(MAY BE DITCHED IF DEEMEND UNECESSARY)//
-void checkUnexploredRegionUpwards() {
-    for (int i = 0; i < numElements; i++) {
-        //if there exists a larger (x,y) tuple than anywhere else then we know we have missed a region 
-        //so far, missed region re-calculated by..
-    }
-}
-
-//**To Be Finished**(MAY BE DITCHED IF DEEMEND UNECESSARY)//
-void checkUnexploredRegionDownwards() {
-    for (int i = 0; i < numElements; i++) {
-        int test;
-        int test2;
-        test = visitedCoordinates[i].x;
-        test2 = visitedCoordinates[i].y;
-    }
-}
-
 //Send data to the map from the struct, stored in the struct:
 //typedef struct {
     //int x;
@@ -655,7 +664,6 @@ void sendData(char *string, int number) {
     }
     return;
 }
-
 
 void alg() {
     yplus_direction_movement();
