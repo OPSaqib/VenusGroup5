@@ -6,55 +6,79 @@ import sys
 
 # Set up variables for connecting
 broker_address = "mqtt.ics.ele.tue.nl"
-topic_publish = "/pynqbridge/5/send"
-topic_subscribe = "/pynqbridge/5/recv"
-username = "Student09"  # Use Student09 or Student10
-password = "Ok1Kasie"   # Use Ok1Kasie for Student09 of Ea6leof9 for Student10
+topic_publish_robot_A = "/pynqbridge/5/recv"        # switched send and recv because they are defined for the pynq and not the computer!!!
+topic_subscribe_robot_A = "/pynqbridge/5/send"      # ---> see connectivity board section: https://pynq.tue.nl/5EID0/io/
+topic_publish_robot_B = "/pynqbridge/41/recv"
+topic_subscribe_robot_B = "/pynqbridge/41/send"
+username_A = "Student09"  # use Student09 or Student10
+password_A = "Ok1Kasie"   # use Ok1Kasie for Student09 or Ea6leof9 for Student10
+username_B = "Student81"  # use Student81 or Student82
+password_B = "uN0ooh0G"   # use uN0ooh0G for Student81 or uX5Ohzei for Student82
 
 # Select mode:
-mode_0_or_1 = 1         # 1 for testing, 0 for running
+mode_0_or_1 = 0         # 1 for testing, 0 for running
 if mode_0_or_1 == 1:
-    topic_subscribe = topic_publish
+    topic_subscribe_robot_A = topic_publish_robot_A
+    topic_subscribe_robot_B = topic_publish_robot_B
 
-# Callback when connecting to the MQTT broker
-def on_connect(client, userdata, flags, rc):
+# Callbacks when connecting to the MQTT broker
+def on_connect_A(client_A, userdata, flags, rc):
     if rc == 0:
-        print("Connected to MQTT Broker!")
-        client.subscribe(topic_subscribe, qos=1)
+        print("Connected robot A!")
+        client_A.subscribe(topic_subscribe_robot_A, qos=1)
     else:
-        print(f"Failed to connect, return code {rc}\n")
+        print(f"Failed to connect to A, return code {rc}\n")
+
+def on_connect_B(client_B, userdata, flags, rc):
+    if rc == 0:
+        print("Connected to robot B!")
+        client_B.subscribe(topic_subscribe_robot_B, qos=1)
+    else:
+        print(f"Failed to connect to B, return code {rc}\n")
 
 # Callback when receiving a message from the MQTT broker            ===> what to do when message is recieved!
 def on_message(client, userdata, message):
     print("Received message: " + str(message.payload.decode("utf-8")) + "| on topic " + message.topic)
     
-# Setup MQTT client and callbacks
-client = mqtt.Client("9", clean_session=True)                              # Use 9 for Student9 or 10 for Student10
-client.on_connect = on_connect
-client.on_message = on_message
+# Setup MQTT clients and callbacks
+client_A = mqtt.Client("9", clean_session=True)
+client_A.on_connect = on_connect_A
+client_A.on_message = on_message
+
+client_B = mqtt.Client("81", clean_session=True)
+client_B.on_connect = on_connect_B
+client_B.on_message = on_message
 
 # Set the username and password
-client.username_pw_set(username, password)
+client_A.username_pw_set(username_A, password_A)
+client_B.username_pw_set(username_B, password_B)
 
 # start the infinite loop
 try:
-    client.connect(broker_address, port=1883)                               # Connect to the broker
-    client.loop_start()
-    msg_count = 0
-    while True:                                                             # Publish messages infinitelly
-        if mode_0_or_1 == 1:                                                # Testting
+    client_A.connect(broker_address, port=1883)                               # connect to the broker
+    client_B.connect(broker_address, port=1883)
+    
+    client_A.loop_start()
+    client_B.loop_start()
+    time.sleep(1)
+    msg_count = 0 
+    while True:                                                             # publish messages infinitelly 
+        if mode_0_or_1 == 1:                                                # testting
             message = f"l_speed {msg_count}"
-        else:                                                               # Actual message
+        else:                                                               # actual message
             message = f"r_speed {msg_count}"
-            print("Send message: %s" %message)                              # Check what message was sent
-        client.publish(topic_publish, message)
+            print("Send message: %s" %message)                              # check what message was sent
+        client_A.publish(topic_publish_robot_A, message)                    # sends the same message for both robots ---> can be changed
+        client_B.publish(topic_publish_robot_B, message)
         msg_count += 1
-        time.sleep(3)                                                       # Wait b4 next message
+        time.sleep(3)                                                       # wait b4 next message
 except Exception as error:
     print(f"Failed to connect to MQTT broker at {broker_address}: {error}")
-except KeyboardInterrupt:                                                   # Exit when CTRL+C pressed
+except KeyboardInterrupt:                                                   # exit when CTRL+C pressed
     print("Exiting...")
 finally:
-    client.loop_stop
+    client_A.loop_stop
+    client_B.loop_stop
     print("Disconnecting from the MQTT broker")
-    client.disconnect
+    client_A.disconnect
+    client_B.disconnect
