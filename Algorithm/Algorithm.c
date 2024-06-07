@@ -507,7 +507,7 @@ void updateCoordinate(char* situation, int z) {
             return NULL;
         }
     
-        // Format the string
+        // Format the string, sends a string of the format XaYbSs
         snprintf(formattedString, length + 1, "X%dY%dS%s", x, y, situation);
 
         sendData(formattedString);
@@ -630,9 +630,9 @@ void yplus_direction_movement() {
     char* coordinateDetails = investigateCoordinate();
     
     if (strcmp(coordinateDetails, "Nothing") == 0) {
-        checkUnexploredRegionUpwards();
         updateCoordinate(coordinateDetails, 0);
-        void forward_y_increasing();
+        forward_y_increasing();
+        yplus_direction_movement();
     }
     else if ((strcmp(coordinateDetails, "3x3BlockRed") == 0) || (strcmp(coordinateDetails, "3x3BlockBlue") == 0) 
         || (strcmp(coordinateDetails, "3x3BlockGreen") == 0) || (strcmp(coordinateDetails, "6x6BlockRed") == 0) 
@@ -654,14 +654,15 @@ void yplus_direction_movement() {
             
             yplus_direction_movement(); //continue with forward movement
     } else { //is cliff or hole in ground
+        updateCoordinate(coordinateDetails, 0);
         checkUnexploredRegionUpwards();
         right();
         x = x + 1;
         y = y + 1;
-        updateCoordinate(coordinateDetails, 0);
+        //updateCoordinate(coordinateDetails, 0);
         right();
         y = y - 1;
-        updateCoordinate(coordinateDetails, 0);
+        //updateCoordinate(coordinateDetails, 0);
         yminus_direction_movement();
     }
 }
@@ -670,9 +671,9 @@ void yminus_direction_movement() {
     char* coordinateDetails = investigateCoordinate();
 
     if (strcmp(coordinateDetails, "Nothing") == 0) {
-        checkUnexploredRegionDownwards();
         updateCoordinate(coordinateDetails, 1);
-        void forward_y_increasing();
+        forward_y_increasing();
+        yminus_direction_movement();
     } else if ((strcmp(coordinateDetails, "3x3BlockRed") == 0) || (strcmp(coordinateDetails, "3x3BlockBlue") == 0) 
         || (strcmp(coordinateDetails, "3x3BlockGreen") == 0) || (strcmp(coordinateDetails, "6x6BlockRed") == 0) 
         || (strcmp(coordinateDetails, "6x6BlockBlue") == 0) || (strcmp(coordinateDetails, "6x6BlockGreen") == 0)) {
@@ -692,14 +693,15 @@ void yminus_direction_movement() {
             //updateCoordinate(coordinateDetails, 1);
             yminus_direction_movement(); //continue with (backwards) movement
     } else {
+        updateCoordinate(coordinateDetails, 1);
         checkUnexploredRegionDownwards();
         left();
         x = x + 1;
         y = y - 1;
-        updateCoordinate(coordinateDetails, 1);
+        //updateCoordinate(coordinateDetails, 1);
         right();
         y = y + 1;
-        updateCoordinate(coordinateDetails, 1);
+        //updateCoordinate(coordinateDetails, 1);
         yplus_direction_movement();
     }
 }
