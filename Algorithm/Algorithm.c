@@ -577,11 +577,26 @@ void forward_y_decreasing() {
     y = y - 1;
 }
 
+char selectedStr[100];
+char lastNode[100];
+
 //**To Be Finished**(MAY BE DITCHED IF DEEMEND UNECESSARY)//
 void checkUnexploredRegionUpwards() {
     for (int i = 0; i < numElements; i++) {
         //if there exists a larger (x,y) tuple than anywhere else then we know we have missed a region 
         //so far, missed region re-calculated by..
+        if (strcmp(lastNode, "TapeOrCliff") == 0) {
+            strcpy(selectedStr, coordinateDetails[i].str);
+            if (strcmp(selectedStr, "TapeOrCliff") == 0) {
+                //this means if we detected an unexplored region
+                if (coordinateDetails[numElements - 1].y > coordinateDetails[i].y) {
+                    //turn left
+                    //go forward for coordinateDetails[i].y - coordinateDetails[numElements -1] steps
+                    //turn left
+                    //do yminus_direction_movement();
+                }
+            }
+        }
     }
 }
 
@@ -590,11 +605,20 @@ void checkUnexploredRegionDownwards() {
     for (int i = 0; i < numElements; i++) {
         //if there exists a larger (x,y) tuple than anywhere else then we know we have missed a region 
         //so far, missed region re-calculated by..
-
-        //int test;
-        //int test2;
-        //test = visitedCoordinates[i].x;
-        //test2 = visitedCoordinates[i].y;
+        //if there exists a larger (x,y) tuple than anywhere else then we know we have missed a region 
+        //so far, missed region re-calculated by..
+        if (strcmp(lastNode, "TapeOrCliff") == 0) {
+            strcpy(selectedStr, coordinateDetails[i].str);
+            if (strcmp(selectedStr, "TapeOrCliff") == 0) {
+                //this means if we detected an unexplored region
+                if (coordinateDetails[numElements - 1].y < coordinateDetails[i].y) {
+                    //turn right
+                    //go forward for coordinateDetails[i].y - coordinateDetails[numElements -1] steps
+                    //turn right
+                    //do yplus_direction_movement();
+                }
+            }
+        }
     }
 }
 
