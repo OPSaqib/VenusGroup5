@@ -397,6 +397,13 @@ void setupCommunication() {
     uart_reset_fifos(UART0);
 }
 
+// for recieving messages --> needed for Starting the robot or recieving info from the second robot
+void uart_read_array(const int uart, uint8_t *buf, uint8_t l) {
+    for (uint8_t x = 0; x < l; x++) {
+        buf[x] = uart_recv(uart);
+    }
+}
+
 void uart_send_array(const int uart, uint8_t *buf, uint32_t l) {
     for (uint8_t x = 0; x < l; x++) {
         uart_send(uart, buf[x]);
@@ -495,6 +502,9 @@ void updateCoordinate(char* situation, int z) {
             strcpy(coordinateDetails[numElements].str, situation);
         }
 
+        //print for checking:
+        printf("Coordinate %d: x = %d, y = %d, str = %s\n", numElements, coordinateDetails[numElements].x, coordinateDetails[numElements].y, coordinateDetails[numElements].str);
+
         //SEND TO THE SERVER:
         //send x, y, situation to the server
         // Calculate the length of the final string
@@ -504,7 +514,6 @@ void updateCoordinate(char* situation, int z) {
         char* formattedString = (char*)malloc(length + 1);
         if (formattedString == NULL) {
             printf("Memory allocation failed\n");
-            return NULL;
         }
     
         // Format the string, sends a string of the format XaYbSs
@@ -531,30 +540,30 @@ char* investigateCoordinate() {
     updateDistanceSensorA();
     updateDistanceSensorB();
 
-    if (distanceSensorA <= 250) {
+    if (distanceSensorA <= 220) {
         strcpy(result, "HillAhead");
     } 
-    else if (distanceSensorB <= 50) {
-        if (red > 0 && green > 0 && blue == 0) {
-            strcpy(result, "3x3BlockRed");
-        }
-        else if (red == 0 && green > 0 && blue > 0) {
-            strcpy(result, "3x3BlockBlue");
-        }
-        else if (red == 0 && green > 0 && blue == 0) {
-            strcpy(result, "3x3BlockGreen");
-        }
+    else if (distanceSensorB <= 45) {
+        //if (red > 0 && green > 0 && blue == 0) {
+            //strcpy(result, "3x3BlockRed");
+        //}
+        //else if (red == 0 && green > 0 && blue > 0) {
+            //strcpy(result, "3x3BlockBlue");
+        //}
+        //else if (red == 0 && green > 0 && blue == 0) {
+        strcpy(result, "3x3BlockGreen");
+        //}
     }
-    else if (distanceSensorB <= 100) {
-        if (red > 0 && green > 0 && blue == 0) {
-            strcpy(result, "6x6BlockRed");
-        }
-        else if (red == 0 && green > 0 && blue > 0) {
-            strcpy(result, "6x6BlockBlue");
-        }
-        else if (red == 0 && green > 0 && blue == 0) {
-            strcpy(result, "6x6BlockGreen");
-        }
+    else if (distanceSensorB <= 20) {
+        //if (red > 0 && green > 0 && blue == 0) {
+            //strcpy(result, "6x6BlockRed");
+        //}
+        //else if (red == 0 && green > 0 && blue > 0) {
+            //strcpy(result, "6x6BlockBlue");
+        //}
+        //else if (red == 0 && green > 0 && blue == 0) {
+        strcpy(result, "6x6BlockGreen");
+        //}
     }
     else if (red > 0 && green == 0 && blue == 0) {
         strcpy(result, "TapeOrCliff");
@@ -580,14 +589,14 @@ void forward_y_decreasing() {
 char selectedStr[100];
 char lastNode[100];
 
-//**To Be Finished**(MAY BE DITCHED IF DEEMEND UNECESSARY)//
+//*To Be Finished*(MAY BE DITCHED IF DEEMEND UNECESSARY)//
 void checkUnexploredRegionUpwards() {
     for (int i = 0; i < numElements; i++) {
         //if there exists a larger (x,y) tuple than anywhere else then we know we have missed a region 
         //so far, missed region re-calculated by..
         if (strcmp(lastNode, "TapeOrCliff") == 0) {
             strcpy(selectedStr, coordinateDetails[i].str);
-            if (strcmp(selectedStr, "TapeOrCliff") == 0) {
+            if ((strcmp(selectedStr, "TapeOrCliff") == 0) || (strcmp(selectedStr, "HillAhead") == 0)) {
                 //this means if we detected an unexplored region
                 if (coordinateDetails[numElements - 1].y > coordinateDetails[i].y) {
                     //turn left
@@ -600,7 +609,7 @@ void checkUnexploredRegionUpwards() {
     }
 }
 
-//**To Be Finished**(MAY BE DITCHED IF DEEMEND UNECESSARY)//
+//*To Be Finished*(MAY BE DITCHED IF DEEMEND UNECESSARY)//
 void checkUnexploredRegionDownwards() {
     for (int i = 0; i < numElements; i++) {
         //if there exists a larger (x,y) tuple than anywhere else then we know we have missed a region 
@@ -609,7 +618,7 @@ void checkUnexploredRegionDownwards() {
         //so far, missed region re-calculated by..
         if (strcmp(lastNode, "TapeOrCliff") == 0) {
             strcpy(selectedStr, coordinateDetails[i].str);
-            if (strcmp(selectedStr, "TapeOrCliff") == 0) {
+            if (strcmp(selectedStr, "TapeOrCliff") == 0 || strcmp(selectedStr, "HillAhead") == 0) {
                 //this means if we detected an unexplored region
                 if (coordinateDetails[numElements - 1].y < coordinateDetails[i].y) {
                     //turn right
@@ -659,7 +668,7 @@ void yplus_direction_movement() {
             yplus_direction_movement(); //continue with forward movement
     } else { //is cliff or hole in ground
         updateCoordinate(coordinateDetails, 0);
-        checkUnexploredRegionUpwards();
+        //checkUnexploredRegionUpwards();
         right();
         sleep_msec(100);
         x = x + 1;
@@ -704,7 +713,7 @@ void yminus_direction_movement() {
             yminus_direction_movement(); //continue with (backwards) movement
     } else {
         updateCoordinate(coordinateDetails, 1);
-        checkUnexploredRegionDownwards();
+        //checkUnexploredRegionDownwards();
         left();
         sleep_msec(100);
         x = x + 1;
