@@ -639,16 +639,20 @@ void yplus_direction_movement() {
         || (strcmp(coordinateDetails, "6x6BlockBlue") == 0) || (strcmp(coordinateDetails, "6x6BlockGreen") == 0)) {
             updateCoordinate(coordinateDetails, 0);
             right();
+            sleep_msec(100);
             x = x + 1;
             y = y + 1;
             //updateCoordinate("Nothing", 0);
             left();
+            sleep_msec(100);
             y = y + 1;
             //updateCoordinate("Nothing", 0);
             left();
+            sleep_msec(100);
             x = x - 1;
             //updateCoordinate("Nothing", 0);
             right();
+            sleep_msec(100);
             y = y + 1;
             //updateCoordinate("Nothing", 0);
             
@@ -657,10 +661,12 @@ void yplus_direction_movement() {
         updateCoordinate(coordinateDetails, 0);
         checkUnexploredRegionUpwards();
         right();
+        sleep_msec(100);
         x = x + 1;
         y = y + 1;
         //updateCoordinate(coordinateDetails, 0);
         right();
+        sleep_msec(100);
         y = y - 1;
         //updateCoordinate(coordinateDetails, 0);
         yminus_direction_movement();
@@ -679,16 +685,20 @@ void yminus_direction_movement() {
         || (strcmp(coordinateDetails, "6x6BlockBlue") == 0) || (strcmp(coordinateDetails, "6x6BlockGreen") == 0)) {
             updateCoordinate(coordinateDetails, 1);
             left();
+            sleep_msec(100);
             x = x + 1;
             y = y - 1;
             //updateCoordinate(coordinateDetails, 1);
             right();
+            sleep_msec(100);
             y = y - 1;
             //updateCoordinate(coordinateDetails, 1);
             right();
+            sleep_msec(100);
             x = x - 1;
             //updateCoordinate(coordinateDetails, 1);
             left();
+            sleep_msec(100);
             y = y - 1;
             //updateCoordinate(coordinateDetails, 1);
             yminus_direction_movement(); //continue with (backwards) movement
@@ -696,10 +706,12 @@ void yminus_direction_movement() {
         updateCoordinate(coordinateDetails, 1);
         checkUnexploredRegionDownwards();
         left();
+        sleep_msec(100);
         x = x + 1;
         y = y - 1;
         //updateCoordinate(coordinateDetails, 1);
         right();
+        sleep_msec(100);
         y = y + 1;
         //updateCoordinate(coordinateDetails, 1);
         yplus_direction_movement();
