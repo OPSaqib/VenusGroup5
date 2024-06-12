@@ -2,15 +2,15 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import numpy as np
 
-def create_3d_grid(ax, length, width, height=10):
-    for i in range(length + 1):
+def create_3d_grid(ax, pos_length, neg_length, width, height=10):
+    for i in range(-neg_length, pos_length + 1):
         for j in range(width + 1):
             ax.plot([i, i], [j, j], [0, height], color='gray', linestyle='dotted')
         for j in range(height + 1):
             ax.plot([i, i], [0, width], [j, j], color='gray', linestyle='dotted')
     for i in range(width + 1):
         for j in range(height + 1):
-            ax.plot([0, length], [i, i], [j, j], color='gray', linestyle='dotted')
+            ax.plot([-neg_length, pos_length], [i, i], [j, j], color='gray', linestyle='dotted')
 
 def draw_cube(ax, position, size, color, height=1):
     x, y = position
@@ -99,17 +99,19 @@ def main():
             print("Unknown element")
 
     while True:
-        length_input = input("Enter the length of the grid: ")
+        pos_length_input = input("Enter the positive length of the grid: ")
+        neg_length_input = input("Enter the negative length of the grid: ")
         width_input = input("Enter the width of the grid: ")
         try:
-            length = int(length_input)
+            pos_length = int(pos_length_input)
+            neg_length = int(neg_length_input)
             width = int(width_input)
-            if length <= 0 or width <= 0:
-                print("Please enter positive integers for the length and width.")
+            if pos_length <= 0 or neg_length <= 0 or width <= 0:
+                print("Please enter positive integers for the lengths and width.")
                 continue
             break
         except ValueError:
-            print("Please enter valid integers for the length and width.")
+            print("Please enter valid integers for the lengths and width.")
     
     height = 10
     occupied_positions = set()
@@ -117,18 +119,18 @@ def main():
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
-    create_3d_grid(ax, length, width, height)
+    create_3d_grid(ax, pos_length, neg_length, width, height)
 
     for stone in element_positions['stone']:
         x, y, size, color = stone
-        if 0 <= x <= length and 0 <= y <= width:
+        if -neg_length <= x <= pos_length and 0 <= y <= width:
             draw_cube(ax, (x, y), size, color)
             occupied_positions.add((x, y))
     
     draw_mountain(ax, element_positions['mountain'])
     draw_cliff(ax, element_positions['cliff'])
 
-    ax.set_xlim([0, length])
+    ax.set_xlim([-neg_length, pos_length])
     ax.set_ylim([0, width])
     ax.set_zlim([0, height])
 
@@ -136,10 +138,9 @@ def main():
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
 
-    max_range = max(length, width, height)
-    ax.set_box_aspect([length, width, height])
+    ax.set_box_aspect([neg_length + pos_length, width, height])
 
-    ax.set_xticks(range(length + 1))
+    ax.set_xticks(range(-neg_length, pos_length + 1))
     ax.set_yticks(range(width + 1))
     ax.set_zticks(range(height + 1))
    
