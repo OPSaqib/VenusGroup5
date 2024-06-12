@@ -40,6 +40,24 @@ int distanceSensorB = 0;
 //Movement init:
 //
 
+//IR init:
+#define IR_SENSOR_PINA ADC4
+#define IR_SENSOR_PINB ADC5
+#define NUMBER_IR_VALUES 10
+#define BLACK 0
+#define WHITE 1
+// Delay in seconds
+#define DELAY 1.0 
+
+typedef struct ir_values{
+    int value;
+    struct ir_values *next;
+}ir_val;
+
+//0 == black, 1 == white;
+int IRSensorA;
+int IRSensorB;
+
 //Algorithm init:
 #define MAX_COORDINATES 250
 int x = 0; //store current x co-ordinate
@@ -274,6 +292,105 @@ void updateColourSensorValues() {
     red = bestRedValue();
     blue = bestBlueValue();
     green = bestGreenValue();
+
+    //print for testing:
+    printf("red: %d\n", red);
+    printf("blue: %d\n", blue);
+    printf("green: %d\n", green);
+}
+
+//METHODS FOR IR SENSOR:
+ir_val *appendNode(ir_val *head, int value){
+  //building new link
+  ir_val * newNode = (ir_val *) malloc(sizeof(ir_val));
+  newNode->value = value;
+  newNode->next = NULL;
+  //check if new link is start of the chain
+  if(head == NULL){
+    return newNode;
+  }
+  ir_val * searchLast = head;
+  while(searchLast->next!=NULL){
+    searchLast = searchLast->next;
+  }
+  searchLast->next = newNode;
+  return head;
+}
+
+ir_val *freeNode(ir_val *head){
+  //check if a chain exists
+  if(head==NULL){return NULL;}
+  //delete chain of lenght 1
+  if(head->next==NULL){free(head); return NULL;}
+
+  ir_val *current = head;
+  ir_val *next = head->next;
+  printf("remove curr\n\n");
+  free(current);
+  //current=NULL;
+
+  return next;
+}
+
+int senseVal;
+
+int getIRValues(const adc_channel_t channel) {
+    printf("Entered loop\n");
+
+    int curr_index_IR_VALUES = 0;
+    int ir_avg = 0;
+    struct timeval start_time, current_time;
+    double elapsed_time;
+    // Saves initial time when we enter the loop
+    gettimeofday(&start_time, NULL);
+
+    while (curr_index_IR_VALUES < NUMBER_IR_VALUES) {
+        gettimeofday(&current_time, NULL);
+        elapsed_time = (current_time.tv_sec - start_time.tv_sec) +
+                       (current_time.tv_usec - start_time.tv_usec) / 1000000.0;
+
+        // If the amount of seconds, stored in "DELAY", has passed - take a measurement from the sensor
+        if (elapsed_time >= DELAY) {
+            int ir_sensor_input = adc_read_channel_raw(channel);
+
+            if (channel == ADC4) {
+                senseVal = 410;
+            } else {
+                senseVal = 290;
+            }
+
+            if (ir_sensor_input < senseVal) {    // >260 longer wires sensor  >245 short-wired sensor
+                printf("Black %d\n", ir_sensor_input);
+                ir_avg += BLACK;
+            } else {
+                printf("White %d\n", ir_sensor_input);
+                ir_avg += WHITE;
+            }
+
+            curr_index_IR_VALUES++;
+            // Reset the start time
+            gettimeofday(&start_time, NULL); 
+        }
+    }
+
+    // After saving n values from the sensor display the average
+    if (ir_avg < NUMBER_IR_VALUES / 2) {
+        printf("AVERAGE = BLACK %d\n\n", ir_avg);
+        return 0;
+    } else {
+        printf("AVERAGE = WHITE %d\n\n", ir_avg);
+        return 1;
+    }
+}
+
+//NOTE: 0 IS BLACK AND 1 IS WHITE
+
+void updateIRSensorA() {
+    IRSensorA = getIRValues(IR_SENSOR_PINA);
+}
+
+void updateIRSensorB() {
+    IRSensorB = getIRValues(IR_SENSOR_PINB);
 }
 
 //NOW DISTANCE SENSOR:
@@ -367,10 +484,14 @@ int setupDistanceSensors(void) {
 
 void updateDistanceSensorA() {
     distanceSensorA = tofReadDistance(&sensorA);
+
+    printf("distanceSensorA: %d\n", distanceSensorA);
 }
 
 void updateDistanceSensorB() {
     distanceSensorB = tofReadDistance(&sensorB);
+
+    printf("distanceSensorB: %d\n", distanceSensorB);
 }
 
 //Send data to the map from the struct, stored in the struct:
@@ -458,32 +579,28 @@ void disable_stepper() {
   stepper_destroy();
 }
 
-void forwards() {
-  enable_stepper();
-  stepper_set_speed(3072, 3072);
-  stepper_steps(-200, -200); //CAN BE MODIFIED
-  
-  while (!stepper_steps_done()) {}; //Wait for stepper steps to finish
-  disable_stepper();
-}
-
-//turn the robot right by: right speed X, steps Y, then left steps Y/2, speed X*2 (so goes 1/2 as fast)
 void right() {
-  enable_stepper();
-  stepper_set_speed(6144, 3072);
-  stepper_steps(-1400, -200); //CAN BE MODIFIED
+  stepper_set_speed(-6144, -3072);
+  stepper_steps(-1450, -200); //CAN BE MODIFIED
   while (!stepper_steps_done()) {}; //Wait for stepper steps to finish
-  disable_stepper();
 }
 
-//TODO:
-//turn the robot left by: left speed X, steps Y, then right steps Y/2, speed X*2 (so goes 1/2 as fast)
 void left() {
-  enable_stepper();
-  stepper_set_speed(3072, 6144);
-  stepper_steps(-200, -1350); //CAN BE MODIFIED
+  stepper_set_speed(-3072, -6144);
+  stepper_steps(-200, -1400); //CAN BE MODIFIED
   while (!stepper_steps_done()) {}; //Wait for stepper steps to finish
-  disable_stepper();
+}
+
+void forwards() {
+  stepper_set_speed(-3072, -3072);
+  stepper_steps(-100, -100); //CAN BE MODIFIED
+  while (!stepper_steps_done()) {}; //Wait for stepper steps to finish
+}
+
+void backwards() {
+  stepper_set_speed(3072, 3072);
+  stepper_steps(200, 200); //CAN BE MODIFIED
+  while (!stepper_steps_done()) {}; //Wait for stepper steps to finish
 }
 
 // 0 = y_increasing (going up), 1 = y_decreasing (going down)
@@ -539,11 +656,20 @@ char* investigateCoordinate() {
     updateColourSensorValues();
     updateDistanceSensorA();
     updateDistanceSensorB();
+    updateIRSensorA();
+    updateIRSensorB();
 
     if (distanceSensorA <= 220) {
-        strcpy(result, "HillAhead");
+        strcpy(result, "Hill");
     } 
-    else if (distanceSensorB <= 45) {
+    else if (IRSensorA == 0 && IRSensorB == 0) {
+        //we know its the final movement so just do evertyhing once more.............
+        strcpy(result, "lastmovement");
+    }
+    else if (IRSensorA == 0) {
+        strcpy(result, "TapeOrCliff");
+    }
+    else if (distanceSensorB <= 40) {
         //if (red > 0 && green > 0 && blue == 0) {
             //strcpy(result, "3x3BlockRed");
         //}
@@ -551,10 +677,10 @@ char* investigateCoordinate() {
             //strcpy(result, "3x3BlockBlue");
         //}
         //else if (red == 0 && green > 0 && blue == 0) {
-        strcpy(result, "3x3BlockGreen");
+        strcpy(result, "6x6BlockGreen");
         //}
     }
-    else if (distanceSensorB <= 20) {
+    else if (distanceSensorB <= 50) {
         //if (red > 0 && green > 0 && blue == 0) {
             //strcpy(result, "6x6BlockRed");
         //}
@@ -562,12 +688,10 @@ char* investigateCoordinate() {
             //strcpy(result, "6x6BlockBlue");
         //}
         //else if (red == 0 && green > 0 && blue == 0) {
-        strcpy(result, "6x6BlockGreen");
+        strcpy(result, "3x3BlockGreen");
         //}
     }
-    else if (red > 0 && green == 0 && blue == 0) {
-        strcpy(result, "TapeOrCliff");
-    } else {
+    else {
         strcpy(result, "Nothing");
     }
 
@@ -589,14 +713,14 @@ void forward_y_decreasing() {
 char selectedStr[100];
 char lastNode[100];
 
-//*To Be Finished*(MAY BE DITCHED IF DEEMEND UNECESSARY)//
+//**To Be Finished**(MAY BE DITCHED IF DEEMEND UNECESSARY)//
 void checkUnexploredRegionUpwards() {
     for (int i = 0; i < numElements; i++) {
         //if there exists a larger (x,y) tuple than anywhere else then we know we have missed a region 
         //so far, missed region re-calculated by..
         if (strcmp(lastNode, "TapeOrCliff") == 0) {
             strcpy(selectedStr, coordinateDetails[i].str);
-            if ((strcmp(selectedStr, "TapeOrCliff") == 0) || (strcmp(selectedStr, "HillAhead") == 0)) {
+            if ((strcmp(selectedStr, "TapeOrCliff") == 0) || (strcmp(selectedStr, "Hill") == 0)) {
                 //this means if we detected an unexplored region
                 if (coordinateDetails[numElements - 1].y > coordinateDetails[i].y) {
                     //turn left
@@ -609,7 +733,7 @@ void checkUnexploredRegionUpwards() {
     }
 }
 
-//*To Be Finished*(MAY BE DITCHED IF DEEMEND UNECESSARY)//
+//**To Be Finished**(MAY BE DITCHED IF DEEMEND UNECESSARY)//
 void checkUnexploredRegionDownwards() {
     for (int i = 0; i < numElements; i++) {
         //if there exists a larger (x,y) tuple than anywhere else then we know we have missed a region 
@@ -618,7 +742,7 @@ void checkUnexploredRegionDownwards() {
         //so far, missed region re-calculated by..
         if (strcmp(lastNode, "TapeOrCliff") == 0) {
             strcpy(selectedStr, coordinateDetails[i].str);
-            if (strcmp(selectedStr, "TapeOrCliff") == 0 || strcmp(selectedStr, "HillAhead") == 0) {
+            if (strcmp(selectedStr, "TapeOrCliff") == 0 || strcmp(selectedStr, "Hill") == 0) {
                 //this means if we detected an unexplored region
                 if (coordinateDetails[numElements - 1].y < coordinateDetails[i].y) {
                     //turn right
@@ -647,6 +771,7 @@ void yplus_direction_movement() {
         || (strcmp(coordinateDetails, "3x3BlockGreen") == 0) || (strcmp(coordinateDetails, "6x6BlockRed") == 0) 
         || (strcmp(coordinateDetails, "6x6BlockBlue") == 0) || (strcmp(coordinateDetails, "6x6BlockGreen") == 0)) {
             updateCoordinate(coordinateDetails, 0);
+            backwards();
             right();
             sleep_msec(100);
             x = x + 1;
@@ -666,8 +791,13 @@ void yplus_direction_movement() {
             //updateCoordinate("Nothing", 0);
             
             yplus_direction_movement(); //continue with forward movement
+    } else if (strcmp(coordinateDetails, "lastmovement") == 0) {
+        //turn right
+        //turn right
+        //go forward until detect tape, then *FINISH*
     } else { //is cliff or hole in ground
         updateCoordinate(coordinateDetails, 0);
+        backwards();
         //checkUnexploredRegionUpwards();
         right();
         sleep_msec(100);
@@ -693,6 +823,7 @@ void yminus_direction_movement() {
         || (strcmp(coordinateDetails, "3x3BlockGreen") == 0) || (strcmp(coordinateDetails, "6x6BlockRed") == 0) 
         || (strcmp(coordinateDetails, "6x6BlockBlue") == 0) || (strcmp(coordinateDetails, "6x6BlockGreen") == 0)) {
             updateCoordinate(coordinateDetails, 1);
+            backwards();
             left();
             sleep_msec(100);
             x = x + 1;
@@ -713,6 +844,7 @@ void yminus_direction_movement() {
             yminus_direction_movement(); //continue with (backwards) movement
     } else {
         updateCoordinate(coordinateDetails, 1);
+        backwards();
         //checkUnexploredRegionDownwards();
         left();
         sleep_msec(100);
@@ -733,10 +865,13 @@ void alg() {
 
 //Actually execute everything:
 int main(void) {
+    enable_stepper();
+    adc_init();
     setupColorSensor();
     setupDistanceSensors();
     setupCommunication();
     alg(); //RUN THE DESIRED ALGORITHM
+    disable_stepper();
     pynq_destroy();
     return EXIT_SUCCESS;
 }
