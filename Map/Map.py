@@ -12,16 +12,16 @@ def create_3d_grid(ax, length, width, height=10):
         for j in range(height + 1):
             ax.plot([0, length], [i, i], [j, j], color='gray', linestyle='dotted')
 
-def draw_cube(ax, position, size, color):
+def draw_cube(ax, position, size, color, height=1):
     x, y = position
     z = 0
     vertices = [
         [(x, y, z), (x + size, y, z), (x + size, y + size, z), (x, y + size, z)],
-        [(x, y, z + size), (x + size, y, z + size), (x + size, y + size, z + size), (x, y + size, z + size)],
-        [(x, y, z), (x + size, y, z), (x + size, y, z + size), (x, y, z + size)],
-        [(x, y + size, z), (x + size, y + size, z), (x + size, y + size, z + size), (x, y + size, z + size)],
-        [(x, y, z), (x, y + size, z), (x, y + size, z + size), (x, y, z + size)],
-        [(x + size, y, z), (x + size, y + size, z), (x + size, y + size, z + size), (x + size, y, z + size)],
+        [(x, y, z + height), (x + size, y, z + height), (x + size, y + size, z + height), (x, y + size, z + height)],
+        [(x, y, z), (x + size, y, z), (x + size, y, z + height), (x, y, z + height)],
+        [(x, y + size, z), (x + size, y + size, z), (x + size, y + size, z + height), (x, y + size, z + height)],
+        [(x, y, z), (x, y + size, z), (x, y + size, z + height), (x, y, z + height)],
+        [(x + size, y, z), (x + size, y + size, z), (x + size, y + size, z + height), (x + size, y, z + height)],
     ]
     poly3d = Poly3DCollection(vertices, facecolors=color, linewidths=1, edgecolors='black', alpha=.5)
     ax.add_collection3d(poly3d)
@@ -41,18 +41,62 @@ def draw_mountain(ax, coordinates, height=10):
     poly3d = Poly3DCollection(vertices, facecolors='brown', linewidths=1, edgecolors='black', alpha=.7)
     ax.add_collection3d(poly3d)
 
-def draw_cliff(ax, coordinates, radius=0.5, resolution=100):
+def draw_cliff(ax, coordinates):
     for (x, y) in coordinates:
-        z = 0.2
-        theta = np.linspace(0, 2 * np.pi, resolution)
-        x_circle = radius * np.cos(theta) + x + 0.5
-        y_circle = radius * np.sin(theta) + y + 0.5
-        z_circle = np.full_like(x_circle, z)
-        ax.plot_trisurf(x_circle, y_circle, z_circle, color='black', alpha=0.7)
+        draw_cube(ax, (x, y), 1, 'black', height=0.05)
 
 def main():
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+    element_positions = {
+        'stone': [],
+        'mountain': [],
+        'cliff': []
+    }
+
+    while True:
+        element_type = input("Select the element you found (stone, mountain, cliff) or enter 'exit' to finish: ")
+        if element_type.lower() == 'exit':
+            break
+        elif element_type.lower() == 'stone':
+            while True:
+                coordinate_input = input("Enter the coordinates of the stone (x,y) or 'done' to finish: ")
+                if coordinate_input.lower() == 'done':
+                    break
+                try:
+                    x, y = map(int, coordinate_input.split(','))
+                    size_input = input("Enter the size of the stone (1, 2): ")
+                    color = input("Enter the color of the stone ('r', 'g', 'b', 'k(black)', 'w'.): ")
+                    size = int(size_input)
+                    element_positions['stone'].append((x, y, size, color))
+                except ValueError:
+                    print("Enter valid coordinates in the format x,y and a valid size.")
+                    continue
+
+        elif element_type.lower() == 'mountain':
+            while True:
+                coordinate_input = input("Enter the coordinates of the mountain (x,y) or 'done' to finish: ")
+                if coordinate_input.lower() == 'done':
+                    break
+                try:
+                    x, y = map(int, coordinate_input.split(','))
+                    element_positions['mountain'].append((x, y))
+                except ValueError:
+                    print("Enter valid coordinates in the format x,y.")
+                    continue
+
+        elif element_type.lower() == 'cliff':
+            while True:
+                coordinate_input = input("Enter the coordinates of the cliff (x,y) or 'done' to finish: ")
+                if coordinate_input.lower() == 'done':
+                    break
+                try:
+                    x, y = map(int, coordinate_input.split(','))
+                    element_positions['cliff'].append((x, y))
+                except ValueError:
+                    print("Enter valid coordinates in the format x,y.")
+                    continue
+
+        else:
+            print("Unknown element")
 
     while True:
         length_input = input("Enter the length of the grid: ")
@@ -70,89 +114,23 @@ def main():
     height = 10
     occupied_positions = set()
    
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
     create_3d_grid(ax, length, width, height)
 
-    while True:
-        element_type = input("Select the element you found (stone, mountain, cliff) or enter 'exit' to finish: ")
-        if element_type.lower() == 'exit':
-            break
-        elif element_type.lower() == 'stone':
-            while True:
-                x_input = input(f"Enter the x-coordinate of the stone (0-{length}): ")
-                y_input = input(f"Enter the y-coordinate of the stone (0-{width}): ")
-                size_input = input("Enter the size of the stone (1, 2): ")
-                color = input("Enter the color of the stone ('r', 'g', 'b', 'k(black)', 'w'.): ")
-
-                try:
-                    x = int(x_input)
-                    y = int(y_input)
-                    size = int(size_input)
-                    if x < 0 or x > length or y < 0 or y > width:
-                        print(f"Coordinates must be between 0 and {length} for x and 0 and {width} for y.")
-                        continue
-                    if (x, y) in occupied_positions:
-                        print("This position is already occupied. Please choose a different position.")
-                        continue
-                    break
-                except ValueError:
-                    print("Enter valid coordinates and size")
-                    continue
-
-            occupied_positions.add((x, y))
+    for stone in element_positions['stone']:
+        x, y, size, color = stone
+        if 0 <= x <= length and 0 <= y <= width:
             draw_cube(ax, (x, y), size, color)
+            occupied_positions.add((x, y))
+    
+    draw_mountain(ax, element_positions['mountain'])
+    draw_cliff(ax, element_positions['cliff'])
 
-        elif element_type.lower() == 'mountain':
-            coordinates = []
-            while True:
-                coordinate_input = input(f"Enter the coordinates of the mountain (x,y) or 'done' to finish: ")
-                if coordinate_input.lower() == 'done':
-                    break
-                try:
-                    x, y = map(int, coordinate_input.split(','))
-                    if x < 0 or x > length or y < 0 or y > width:
-                        print(f"Coordinates must be between 0 and {length} for x and 0 and {width} for y.")
-                        continue
-                    if (x, y) in occupied_positions:
-                        print(f"The position ({x}, {y}) is already occupied. Please choose a different position.")
-                        continue
-                    coordinates.append((x, y))
-                    occupied_positions.add((x, y))
-                except ValueError:
-                    print("Enter valid coordinates in the format x,y.")
-                    continue
-
-            draw_mountain(ax, coordinates)
-
-        elif element_type.lower() == 'cliff':
-            coordinates = []
-            while True:
-                coordinate_input = input(f"Enter the coordinates of the cliff (x,y) or 'done' to finish: ")
-                if coordinate_input.lower() == 'done':
-                    break
-                try:
-                    x, y = map(int, coordinate_input.split(','))
-                    if x < 0 or x > length or y < 0 or y > width:
-                        print(f"Coordinates must be between 0 and {length} for x and 0 and {width} for y.")
-                        continue
-                    if (x, y) in occupied_positions:
-                        print(f"The position ({x}, {y}) is already occupied. Please choose a different position.")
-                        continue
-                    coordinates.append((x, y))
-                    occupied_positions.add((x, y))
-                except ValueError:
-                    print("Enter valid coordinates in the format x,y.")
-                    continue
-
-            draw_cliff(ax, coordinates)
-
-        else:
-            print("Unknown element")
-
-        ax.set_xlim([0, length])
-        ax.set_ylim([0, width])
-        ax.set_zlim([0, height])
-
-        plt.draw()
+    ax.set_xlim([0, length])
+    ax.set_ylim([0, width])
+    ax.set_zlim([0, height])
 
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
@@ -169,4 +147,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
