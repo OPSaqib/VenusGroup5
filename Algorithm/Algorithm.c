@@ -354,9 +354,9 @@ int getIRValues(const adc_channel_t channel) {
             int ir_sensor_input = adc_read_channel_raw(channel);
 
             if (channel == ADC4) {
-                senseVal = 410;
+                senseVal = 415;
             } else {
-                senseVal = 290;
+                senseVal = 265;
             }
 
             if (ir_sensor_input < senseVal) {    // >260 longer wires sensor  >245 short-wired sensor
@@ -483,13 +483,17 @@ int setupDistanceSensors(void) {
 }
 
 void updateDistanceSensorA() {
+    iic_init(IIC0);
     distanceSensorA = tofReadDistance(&sensorA);
+    iic_destroy(IIC0);
 
     printf("distanceSensorA: %d\n", distanceSensorA);
 }
 
 void updateDistanceSensorB() {
+    iic_init(IIC0);
     distanceSensorB = tofReadDistance(&sensorB);
+    iic_destroy(IIC0);
 
     printf("distanceSensorB: %d\n", distanceSensorB);
 }
@@ -598,8 +602,8 @@ void forwards() {
 }
 
 void backwards() {
-  stepper_set_speed(3072, 3072);
-  stepper_steps(200, 200); //CAN BE MODIFIED
+  stepper_set_speed(-3072, -3072);
+  stepper_steps(400, 400); //CAN BE MODIFIED
   while (!stepper_steps_done()) {}; //Wait for stepper steps to finish
 }
 
