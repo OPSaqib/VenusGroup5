@@ -624,7 +624,7 @@ void updateCoordinate(char* situation, int z) {
         }
 
         //print for checking:
-        printf("Coordinate %d: x = %d, y = %d, str = %s\n", numElements, coordinateDetails[numElements].x, coordinateDetails[numElements].y, coordinateDetails[numElements].str);
+        printf("Coordinate %d: x = %d, y = %d, situation = %s\n", numElements, coordinateDetails[numElements].x, coordinateDetails[numElements].y, coordinateDetails[numElements].str);
 
         //SEND TO THE SERVER:
         //send x, y, situation to the server
