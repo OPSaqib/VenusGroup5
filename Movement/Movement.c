@@ -47,7 +47,7 @@ void forwards() {
 
 void backwards() {
   //enable_stepper();
-  stepper_set_speed(3072, 3072);
+  stepper_set_speed(-3072, -3072);
   stepper_steps(400, 400); //CAN BE MODIFIED
   while (!stepper_steps_done()) {}; //Wait for stepper steps to finish
   //disable_stepper();
