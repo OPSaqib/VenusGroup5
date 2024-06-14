@@ -560,6 +560,7 @@ void sendData(char* string) {
         uart_send_array(UART0, &byte[0], num);
 
         free(byte);
+        printf("Sent data to sever\n");
         return;
     } else {
         sendData(string);  // Try again if uart is full and cannot send data!
@@ -648,6 +649,34 @@ void updateCoordinate(char* situation, int z) {
     }
 }
 
+void sendmaxCoordinates() {
+
+    int maxX = coordinateDetails[0].x;
+    int maxY = coordinateDetails[0].y;
+
+    for (int i = 1; i < numElements; i++) {
+        if (coordinateDetails[i].x > maxX) {
+            maxX = coordinateDetails[i].x;
+        }
+        if (coordinateDetails[i].y > maxY) {
+            maxY = coordinateDetails[i].y;
+        }
+    }
+
+    int length = snprintf(NULL, 0, "XMAX%dYMAX%d", maxX, maxY);
+    
+    // Allocate memory for the final string (+1 for null terminator)
+    char* formattedString = (char*)malloc(length + 1);
+    if (formattedString == NULL) {
+        printf("Memory allocation failed\n");
+    }
+    
+    // Format the string, sends a string of the format XaYbSs
+    snprintf(formattedString, length + 1, "XMAX%dYMAX%d", maxX, maxY);
+
+    sendData(formattedString);
+}
+
 //For calling this do:
 //NOW CALL THE METHODS, ADD A MSC DELAY (sleep_msec(100)) ie between calling of methods
 
@@ -722,6 +751,9 @@ void checkUnexploredRegionUpwards() {
     for (int i = 0; i < numElements; i++) {
         //if there exists a larger (x,y) tuple than anywhere else then we know we have missed a region 
         //so far, missed region re-calculated by..
+        printf("Entered checkUnexploredRegionUpwards\n");
+
+        strcpy(lastNode, coordinateDetails[numElements - 1].str);
         if (strcmp(lastNode, "TapeOrCliff") == 0) {
             strcpy(selectedStr, coordinateDetails[i].str);
             if ((strcmp(selectedStr, "TapeOrCliff") == 0) || (strcmp(selectedStr, "Hill") == 0)) {
@@ -744,6 +776,9 @@ void checkUnexploredRegionDownwards() {
         //so far, missed region re-calculated by..
         //if there exists a larger (x,y) tuple than anywhere else then we know we have missed a region 
         //so far, missed region re-calculated by..
+        printf("Entered checkUnexploredRegionDownwards\n");
+
+        strcpy(lastNode, coordinateDetails[numElements - 1].str);
         if (strcmp(lastNode, "TapeOrCliff") == 0) {
             strcpy(selectedStr, coordinateDetails[i].str);
             if (strcmp(selectedStr, "TapeOrCliff") == 0 || strcmp(selectedStr, "Hill") == 0) {
@@ -796,6 +831,7 @@ void yplus_direction_movement() {
             
             yplus_direction_movement(); //continue with forward movement
     } else if (strcmp(coordinateDetails, "lastmovement") == 0) {
+        sendmaxCoordinates();
         //turn right
         //turn right
         //go forward until detect tape, then *FINISH*
