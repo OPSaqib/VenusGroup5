@@ -663,7 +663,10 @@ void sendmaxCoordinates() {
         }
     }
 
-    int length = snprintf(NULL, 0, "XMAX%dYMAX%d", maxX, maxY);
+    static char situation[100];
+    strcpy(situation, "Finished");
+
+    int length = snprintf(NULL, 0, "X%dY%dS%s", x, y, situation);
     
     // Allocate memory for the final string (+1 for null terminator)
     char* formattedString = (char*)malloc(length + 1);
@@ -672,7 +675,7 @@ void sendmaxCoordinates() {
     }
     
     // Format the string, sends a string of the format XaYbSs
-    snprintf(formattedString, length + 1, "XMAX%dYMAX%d", maxX, maxY);
+    snprintf(formattedString, length + 1, "X%dY%dS%s", x, y, situation);
 
     sendData(formattedString);
 }
