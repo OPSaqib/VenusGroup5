@@ -83,6 +83,11 @@ typedef struct {
 
 CoordinateDetails coordinateDetails[MAX_COORDINATES];
 
+// 0 == unchecked, 1 == checked already
+int checkUnexploredRegionHill = 0;
+
+int checkUnexploredRegionCliff = 0;
+
 //ex to add an element do: visitedCoordinates[numElements] = (VisitedCoordinates){x, y};
 //Replace x,y with coordinate of elemet you want to add
 //Then don't forget to do: numElements++;
@@ -387,12 +392,12 @@ int getIRValues(const adc_channel_t channel) {
             int ir_sensor_input = adc_read_channel_raw(channel);
 
             if (channel == ADC4) {
-                senseVal = 415;
+                senseVal = 435;
             } else {
                 senseVal = 265;
             }
 
-            if (ir_sensor_input < senseVal) {    // >260 longer wires sensor  >245 short-wired sensor
+            if (ir_sensor_input < senseVal) {
                 printf("Black %d\n", ir_sensor_input);
                 ir_avg += BLACK;
             } else {
@@ -677,9 +682,15 @@ void forwards() {
   while (!stepper_steps_done()) {}; //Wait for stepper steps to finish
 }
 
-void backwards() {
+void backwardsmain() {
   stepper_set_speed(-3072, -3072);
   stepper_steps(600, 600); //CAN BE MODIFIED
+  while (!stepper_steps_done()) {}; //Wait for stepper steps to finish
+}
+
+void backwards2() {
+  stepper_set_speed(-3072, -3072);
+  stepper_steps(350, 350); //CAN BE MODIFIED
   while (!stepper_steps_done()) {}; //Wait for stepper steps to finish
 }
 
@@ -758,6 +769,10 @@ void sendmaxCoordinates() {
         }
     }
 
+    // Print the maximum x and y values
+    printf("Max X: %d\n", maxX);
+    printf("Max Y: %d\n", maxY);
+
     static char situation[100];
     strcpy(situation, "Finished");
 
@@ -800,29 +815,30 @@ char* investigateCoordinate() {
     else if (IRSensorA == 0) {
         strcpy(result, "TapeOrCliff");
     }
-    else if (distanceSensorB <= 35) {
-        if (red < 45 && green < 45 && blue < 45) {
-            strcpy(result, "6x6BlockWhite");
+    else if (distanceSensorB <= 31) {
+        if (red < 65 && green < 65 && blue < 65) {
+            strcpy(result, "6x6BlockRed"); //should be White
         }
-        else if (red < 95 && green < 95 && blue < 95) {
-            strcpy(result, "6x6BlockGreen");
+        else if (blue > 100) {
+            strcpy(result, "6x6BlockRed"); //should be Blue
         }
         else if (green > 100) {
-            strcpy(result, "6x6BlockGreen");
+            strcpy(result, "6x6BlockRed"); //should be Green
         } else {
             strcpy(result, "6x6BlockRed");
         }
     }
     else if (distanceSensorB <= 50) {
-        if (red < 45 && green < 45 && blue < 45) {
+        if (red < 70 && green < 70 && blue < 70) {
             strcpy(result, "3x3BlockWhite");
         }
-        else if (red < 95 && green < 95 && blue < 95) {
-            strcpy(result, "3x3BlockGreen");
+        else if (red < 110 && blue < 110 && green < 110) {
+            strcpy(result, "3x3BlockBlue");
         }
-        else if (green > 100) {
-            strcpy(result, "3x3BlockGreen");
-        } else {
+        //else if (green > 100 && blue < 120) {
+            //strcpy(result, "3x3BlockGreen");
+        //} 
+        else {
             strcpy(result, "3x3BlockRed");
         }
     }
@@ -842,57 +858,11 @@ void forward_y_increasing() {
 void forward_y_decreasing() {
     forwards();
     sleep_msec(100);
-    y = y - 1;
-}
 
-char selectedStr[100];
-char lastNode[100];
-
-//*To Be Finished*(MAY BE DITCHED IF DEEMEND UNECESSARY)//
-void checkUnexploredRegionUpwards() {
-    for (int i = 0; i < numElements; i++) {
-        //if there exists a larger (x,y) tuple than anywhere else then we know we have missed a region 
-        //so far, missed region re-calculated by..
-        printf("Entered checkUnexploredRegionUpwards\n");
-
-        strcpy(lastNode, coordinateDetails[numElements - 1].str);
-        if (strcmp(lastNode, "TapeOrCliff") == 0) {
-            strcpy(selectedStr, coordinateDetails[i].str);
-            if ((strcmp(selectedStr, "TapeOrCliff") == 0) || (strcmp(selectedStr, "Hill") == 0)) {
-                //this means if we detected an unexplored region
-                if (coordinateDetails[numElements - 1].y > coordinateDetails[i].y) {
-                    //turn left
-                    //go forward for coordinateDetails[i].y - coordinateDetails[numElements -1] steps
-                    //turn left
-                    //do yminus_direction_movement();
-                }
-            }
-        }
-    }
-}
-
-//*To Be Finished*(MAY BE DITCHED IF DEEMEND UNECESSARY)//
-void checkUnexploredRegionDownwards() {
-    for (int i = 0; i < numElements; i++) {
-        //if there exists a larger (x,y) tuple than anywhere else then we know we have missed a region 
-        //so far, missed region re-calculated by..
-        //if there exists a larger (x,y) tuple than anywhere else then we know we have missed a region 
-        //so far, missed region re-calculated by..
-        printf("Entered checkUnexploredRegionDownwards\n");
-
-        strcpy(lastNode, coordinateDetails[numElements - 1].str);
-        if (strcmp(lastNode, "TapeOrCliff") == 0) {
-            strcpy(selectedStr, coordinateDetails[i].str);
-            if (strcmp(selectedStr, "TapeOrCliff") == 0 || strcmp(selectedStr, "Hill") == 0) {
-                //this means if we detected an unexplored region
-                if (coordinateDetails[numElements - 1].y < coordinateDetails[i].y) {
-                    //turn right
-                    //go forward for coordinateDetails[i].y - coordinateDetails[numElements -1] steps
-                    //turn right
-                    //do yplus_direction_movement();
-                }
-            }
-        }
+    if (y <= 1) {
+        y = 1;
+    } else {
+        y = y - 1;
     }
 }
 
@@ -901,6 +871,162 @@ void yplus_direction_movement();
 void yminus_direction_movement();
 
 void robot_finished();
+
+char selectedStr[100];
+char lastNode[100];
+
+//**To Be Finished**(MAY BE DITCHED IF DEEMEND UNECESSARY)//
+void checkUnexploredRegionUpwardsHill() {
+
+    strcpy(lastNode, coordinateDetails[numElements - 1].str);
+
+    if (strcmp(lastNode, "TapeOrCliff") == 0 && checkUnexploredRegionHill == 0) {
+        for (int i = 0; i < numElements; i++) {
+
+            printf("Entered checkUnexploredRegionUpwardsHill\n");
+
+            strcpy(selectedStr, coordinateDetails[i].str);
+
+            if (strcmp(selectedStr, "Hill") == 0) {
+                if (coordinateDetails[numElements - 1].y > coordinateDetails[i].y) {
+
+                    left();
+                    sleep_msec(100);
+                    x = x - 1;
+
+                    int k = coordinateDetails[i].y - coordinateDetails[numElements - 1].y;
+
+                    for (int i = 0; i < k; i++) {
+                        forwards();
+                        sleep_msec(100);
+                        x = x - 1;
+                        k++;
+                    }
+
+                    left();
+                    y = y - 1;
+                    sleep_msec(100);
+                    checkUnexploredRegionHill = 1;
+                    yminus_direction_movement();
+                }
+            }
+        }
+    }
+}
+
+void checkUnexploredRegionUpwardsCliff() {
+    strcpy(lastNode, coordinateDetails[numElements - 1].str);
+
+    if (strcmp(lastNode, "TapeOrCliff") == 0 && checkUnexploredRegionCliff == 0) {
+        for (int i = 0; i < numElements; i++) {
+
+            printf("Entered checkUnexploredRegionUpwardsCliff\n");
+
+            strcpy(selectedStr, coordinateDetails[i].str);
+
+            if (strcmp(selectedStr, "TapeOrCliff") == 0) {
+                if (coordinateDetails[numElements - 1].y > coordinateDetails[i].y) {
+
+                    left();
+                    sleep_msec(100);
+                    x = x - 1;
+
+                    int k = coordinateDetails[i].y - coordinateDetails[numElements - 1].y;
+
+                    for (int i = 0; i < k; i++) {
+                        forwards();
+                        sleep_msec(100);
+                        x = x - 1;
+                        k++;
+                    }
+
+                    left();
+                    y = y - 1;
+                    sleep_msec(100);
+                    checkUnexploredRegionCliff = 1;
+                    yminus_direction_movement();
+                }
+            }
+        }
+    }
+
+}
+
+void checkUnexploredRegionDownwardsHill() {
+    strcpy(lastNode, coordinateDetails[numElements - 1].str);
+
+    if (strcmp(lastNode, "TapeOrCliff") == 0 && checkUnexploredRegionHill == 0) {
+        for (int i = 0; i < numElements; i++) {
+
+            printf("Entered checkUnexploredRegionDownwardsHill\n");
+
+            strcpy(selectedStr, coordinateDetails[i].str);
+
+            if (strcmp(selectedStr, "Hill") == 0) {
+                if (coordinateDetails[numElements - 1].y < coordinateDetails[i].y) {
+
+                    right();
+                    sleep_msec(100);
+                    x = x - 1;
+
+                    int k = coordinateDetails[i].y - coordinateDetails[numElements - 1].y;
+
+                    for (int i = 0; i < k; i++) {
+                        forwards();
+                        sleep_msec(100);
+                        x = x - 1;
+                        k++;
+                    }
+
+                    right();
+                    y = y + 1;
+                    sleep_msec(100);
+                    checkUnexploredRegionHill = 1;
+                    yplus_direction_movement();
+                }
+            }
+        }
+    }
+
+}
+
+void checkUnexploredRegionDownwardsCliff() {
+    strcpy(lastNode, coordinateDetails[numElements - 1].str);
+
+    if (strcmp(lastNode, "TapeOrCliff") == 0 && checkUnexploredRegionCliff == 0) {
+        for (int i = 0; i < numElements; i++) {
+
+            printf("Entered checkUnexploredRegionDownwardsCliff\n");
+
+            strcpy(selectedStr, coordinateDetails[i].str);
+
+            if (strcmp(selectedStr, "TapeOrCliff") == 0) {
+                if (coordinateDetails[numElements - 1].y < coordinateDetails[i].y) {
+
+                    right();
+                    sleep_msec(100);
+                    x = x - 1;
+
+                    int k = coordinateDetails[i].y - coordinateDetails[numElements - 1].y;
+
+                    for (int i = 0; i < k; i++) {
+                        forwards();
+                        sleep_msec(100);
+                        x = x - 1;
+                        k++;
+                    }
+
+                    right();
+                    y = y + 1;
+                    sleep_msec(100);
+                    checkUnexploredRegionCliff = 1;
+                    yplus_direction_movement();
+                }
+            }
+        }
+    }
+
+}
 
 void yplus_direction_movement() {
     char* coordinateDetails = investigateCoordinate();
@@ -911,10 +1037,11 @@ void yplus_direction_movement() {
         yplus_direction_movement();
     }
     else if ((strcmp(coordinateDetails, "3x3BlockRed") == 0) || (strcmp(coordinateDetails, "3x3BlockBlue") == 0) 
-        || (strcmp(coordinateDetails, "3x3BlockGreen") == 0) || (strcmp(coordinateDetails, "6x6BlockRed") == 0) 
-        || (strcmp(coordinateDetails, "6x6BlockBlue") == 0) || (strcmp(coordinateDetails, "6x6BlockGreen") == 0)) {
+        || (strcmp(coordinateDetails, "3x3BlockGreen") == 0) || (strcmp(coordinateDetails, "3x3BlockWhite") == 0)
+        || (strcmp(coordinateDetails, "6x6BlockRed") == 0)   || (strcmp(coordinateDetails, "6x6BlockBlue") == 0) 
+        || (strcmp(coordinateDetails, "6x6BlockGreen") == 0)) {
             updateCoordinate(coordinateDetails, 0);
-            backwards();
+            backwardsmain();
             right();
             sleep_msec(100);
             //x = x + 1;
@@ -951,14 +1078,17 @@ void yplus_direction_movement() {
             yplus_direction_movement(); //continue with forward movement
     } else if (strcmp(coordinateDetails, "lastmovement") == 0) {
         sendmaxCoordinates();
+        //robot_finished();
+        printf("Entered LastMovement part\n");
         robot_finished();
         //turn right
         //turn right
-        //go forward until detect tape, then FINISH
+        //go forward until detect tape, then *FINISH*
     } else { //is cliff or hole in ground
         updateCoordinate(coordinateDetails, 0);
-        backwards();
-        //checkUnexploredRegionUpwards();
+        backwards2();
+        //checkUnexploredRegionUpwardsHill();
+        //checkUnexploredRegionUpwardsCliff();
         right();
         sleep_msec(100);
         x = x + 1;
@@ -966,11 +1096,11 @@ void yplus_direction_movement() {
         static char test[100];
         strcpy(test, "Nothing");
         //y = y + 1;
-        updateCoordinate(test, 0);
-        sleep_msec(100);
+        //updateCoordinate(test, 0);
+        //sleep_msec(100);
         forwards();
         sleep_msec(100);
-        forwards();
+        //forwards();
         right();
         sleep_msec(100);
         y = y - 1;
@@ -984,13 +1114,14 @@ void yminus_direction_movement() {
 
     if (strcmp(coordinateDetails, "Nothing") == 0) {
         updateCoordinate(coordinateDetails, 1);
-        forward_y_increasing();
+        forward_y_decreasing();
         yminus_direction_movement();
     } else if ((strcmp(coordinateDetails, "3x3BlockRed") == 0) || (strcmp(coordinateDetails, "3x3BlockBlue") == 0) 
-        || (strcmp(coordinateDetails, "3x3BlockGreen") == 0) || (strcmp(coordinateDetails, "6x6BlockRed") == 0) 
-        || (strcmp(coordinateDetails, "6x6BlockBlue") == 0) || (strcmp(coordinateDetails, "6x6BlockGreen") == 0)) {
+        || (strcmp(coordinateDetails, "3x3BlockGreen") == 0) || (strcmp(coordinateDetails, "3x3BlockWhite") == 0)
+        || (strcmp(coordinateDetails, "6x6BlockRed") == 0)   || (strcmp(coordinateDetails, "6x6BlockBlue") == 0) 
+        || (strcmp(coordinateDetails, "6x6BlockGreen") == 0)) {
             updateCoordinate(coordinateDetails, 1);
-            backwards();
+            backwardsmain();
             left();
             sleep_msec(100);
             //x = x + 1;
@@ -1021,13 +1152,21 @@ void yminus_direction_movement() {
             //updateCoordinate(coordinateDetails, 1);
             left();
             sleep_msec(100);
-            y = y - 1;
+
+            //now update the y coordinate
+            if (y <= 1) {
+                y = 1;
+            } else {
+                y = y - 1;
+            }
+
             //updateCoordinate(coordinateDetails, 1);
             yminus_direction_movement(); //continue with (backwards) movement
     } else {
         updateCoordinate(coordinateDetails, 1);
-        backwards();
-        //checkUnexploredRegionDownwards();
+        backwards2();
+        //checkUnexploredRegionDownwardsHill();
+        //checkUnexploredRegionDownwardsCliff();
         left();
         sleep_msec(100);
         x = x + 1;
@@ -1035,14 +1174,14 @@ void yminus_direction_movement() {
         static char test[100];
         strcpy(test, "Nothing");
         //y = y + 1;
-        updateCoordinate(test, 1);
+        //updateCoordinate(test, 1);
         //x = x + 1;
         //y = y - 1;
         //updateCoordinate(coordinateDetails, 1);
-        sleep_msec(100);
+        //sleep_msec(100);
         forwards();
         sleep_msec(100);
-        forwards();
+        //forwards();
         left();
         sleep_msec(100);
         y = y + 1;
@@ -1075,7 +1214,7 @@ int main(void) {
         recieveData();
     }
 
-    printf("Robot sterted!\n");
+    printf("Robot sterted!\n");
     alg(); //RUN THE DESIRED ALGORITHM
     //disable_stepper();
     //pynq_destroy();
