@@ -392,9 +392,9 @@ int getIRValues(const adc_channel_t channel) {
             int ir_sensor_input = adc_read_channel_raw(channel);
 
             if (channel == ADC4) {
-                senseVal = 435;
+                senseVal = 595;
             } else {
-                senseVal = 265;
+                senseVal = 300;
             }
 
             if (ir_sensor_input < senseVal) {
@@ -678,19 +678,19 @@ void left() {
 
 void forwards() {
   stepper_set_speed(-3072, -3072);
-  stepper_steps(-100, -100); //CAN BE MODIFIED
+  stepper_steps(-150, -150); //CAN BE MODIFIED, WAS ORIGINALLY (-100, -100)
   while (!stepper_steps_done()) {}; //Wait for stepper steps to finish
 }
 
 void backwardsmain() {
   stepper_set_speed(-3072, -3072);
-  stepper_steps(600, 600); //CAN BE MODIFIED
+  stepper_steps(650, 650); //CAN BE MODIFIED
   while (!stepper_steps_done()) {}; //Wait for stepper steps to finish
 }
 
 void backwards2() {
   stepper_set_speed(-3072, -3072);
-  stepper_steps(350, 350); //CAN BE MODIFIED
+  stepper_steps(450, 450); //CAN BE MODIFIED
   while (!stepper_steps_done()) {}; //Wait for stepper steps to finish
 }
 
@@ -805,7 +805,7 @@ char* investigateCoordinate() {
     updateIRSensorA();
     updateIRSensorB();
 
-    if (distanceSensorA <= 220) {
+    if (distanceSensorA <= 220 && distanceSensorA != 0) {
         strcpy(result, "Hill");
     } 
     else if (IRSensorA == 0 && IRSensorB == 0) {
@@ -828,18 +828,18 @@ char* investigateCoordinate() {
             strcpy(result, "6x6BlockRed");
         }
     }
-    else if (distanceSensorB <= 50) {
+    else if (distanceSensorB <= 46) {
         if (red < 70 && green < 70 && blue < 70) {
-            strcpy(result, "3x3BlockWhite");
+            strcpy(result, "3x3BlockGreen");
         }
         else if (red < 110 && blue < 110 && green < 110) {
-            strcpy(result, "3x3BlockBlue");
+            strcpy(result, "3x3BlockGreen");
         }
         //else if (green > 100 && blue < 120) {
             //strcpy(result, "3x3BlockGreen");
         //} 
         else {
-            strcpy(result, "3x3BlockRed");
+            strcpy(result, "3x3BlockGreen");
         }
     }
     else {
@@ -887,21 +887,19 @@ void checkUnexploredRegionUpwardsHill() {
 
             strcpy(selectedStr, coordinateDetails[i].str);
 
-            if (strcmp(selectedStr, "Hill") == 0) {
+            if (strcmp(selectedStr, "Hill") == 0 && checkUnexploredRegionHill == 0) {
                 if (coordinateDetails[numElements - 1].y > coordinateDetails[i].y) {
+
+                    printf("Entered checkUnexploredRegionUpwardsHill\n");
 
                     left();
                     sleep_msec(100);
                     x = x - 1;
 
-                    int k = coordinateDetails[i].y - coordinateDetails[numElements - 1].y;
-
-                    for (int i = 0; i < k; i++) {
-                        forwards();
-                        sleep_msec(100);
-                        x = x - 1;
-                        k++;
-                    }
+                    forwards();
+                    sleep_msec(100);
+                    forwards();
+                    sleep_msec(100);
 
                     left();
                     y = y - 1;
@@ -920,12 +918,12 @@ void checkUnexploredRegionUpwardsCliff() {
     if (strcmp(lastNode, "TapeOrCliff") == 0 && checkUnexploredRegionCliff == 0) {
         for (int i = 0; i < numElements; i++) {
 
-            printf("Entered checkUnexploredRegionUpwardsCliff\n");
-
             strcpy(selectedStr, coordinateDetails[i].str);
 
-            if (strcmp(selectedStr, "TapeOrCliff") == 0) {
+            if (strcmp(selectedStr, "TapeOrCliff") == 0 && checkUnexploredRegionCliff == 0) {
                 if (coordinateDetails[numElements - 1].y > coordinateDetails[i].y) {
+                    
+                    printf("Entered checkUnexploredRegionUpwardsCliff\n");
 
                     left();
                     sleep_msec(100);
@@ -945,82 +943,6 @@ void checkUnexploredRegionUpwardsCliff() {
                     sleep_msec(100);
                     checkUnexploredRegionCliff = 1;
                     yminus_direction_movement();
-                }
-            }
-        }
-    }
-
-}
-
-void checkUnexploredRegionDownwardsHill() {
-    strcpy(lastNode, coordinateDetails[numElements - 1].str);
-
-    if (strcmp(lastNode, "TapeOrCliff") == 0 && checkUnexploredRegionHill == 0) {
-        for (int i = 0; i < numElements; i++) {
-
-            printf("Entered checkUnexploredRegionDownwardsHill\n");
-
-            strcpy(selectedStr, coordinateDetails[i].str);
-
-            if (strcmp(selectedStr, "Hill") == 0) {
-                if (coordinateDetails[numElements - 1].y < coordinateDetails[i].y) {
-
-                    right();
-                    sleep_msec(100);
-                    x = x - 1;
-
-                    int k = coordinateDetails[i].y - coordinateDetails[numElements - 1].y;
-
-                    for (int i = 0; i < k; i++) {
-                        forwards();
-                        sleep_msec(100);
-                        x = x - 1;
-                        k++;
-                    }
-
-                    right();
-                    y = y + 1;
-                    sleep_msec(100);
-                    checkUnexploredRegionHill = 1;
-                    yplus_direction_movement();
-                }
-            }
-        }
-    }
-
-}
-
-void checkUnexploredRegionDownwardsCliff() {
-    strcpy(lastNode, coordinateDetails[numElements - 1].str);
-
-    if (strcmp(lastNode, "TapeOrCliff") == 0 && checkUnexploredRegionCliff == 0) {
-        for (int i = 0; i < numElements; i++) {
-
-            printf("Entered checkUnexploredRegionDownwardsCliff\n");
-
-            strcpy(selectedStr, coordinateDetails[i].str);
-
-            if (strcmp(selectedStr, "TapeOrCliff") == 0) {
-                if (coordinateDetails[numElements - 1].y < coordinateDetails[i].y) {
-
-                    right();
-                    sleep_msec(100);
-                    x = x - 1;
-
-                    int k = coordinateDetails[i].y - coordinateDetails[numElements - 1].y;
-
-                    for (int i = 0; i < k; i++) {
-                        forwards();
-                        sleep_msec(100);
-                        x = x - 1;
-                        k++;
-                    }
-
-                    right();
-                    y = y + 1;
-                    sleep_msec(100);
-                    checkUnexploredRegionCliff = 1;
-                    yplus_direction_movement();
                 }
             }
         }
@@ -1042,6 +964,7 @@ void yplus_direction_movement() {
         || (strcmp(coordinateDetails, "6x6BlockGreen") == 0)) {
             updateCoordinate(coordinateDetails, 0);
             backwardsmain();
+            sleep_msec(100);
             right();
             sleep_msec(100);
             //x = x + 1;
@@ -1059,11 +982,6 @@ void yplus_direction_movement() {
             sleep_msec(100);
             forwards();
             sleep_msec(100);
-            forwards();
-            sleep_msec(100);
-            forwards();
-            sleep_msec(100);
-            forwards();
             //y = y + 1;
             //updateCoordinate("Nothing", 0);
             left();
@@ -1087,6 +1005,7 @@ void yplus_direction_movement() {
     } else { //is cliff or hole in ground
         updateCoordinate(coordinateDetails, 0);
         backwards2();
+        sleep_msec(100);
         //checkUnexploredRegionUpwardsHill();
         //checkUnexploredRegionUpwardsCliff();
         right();
@@ -1122,8 +1041,10 @@ void yminus_direction_movement() {
         || (strcmp(coordinateDetails, "6x6BlockGreen") == 0)) {
             updateCoordinate(coordinateDetails, 1);
             backwardsmain();
+            sleep_msec(100);
             left();
             sleep_msec(100);
+
             //x = x + 1;
             //y = y - 1;
             //updateCoordinate(coordinateDetails, 1);
@@ -1139,11 +1060,6 @@ void yminus_direction_movement() {
             sleep_msec(100);
             forwards();
             sleep_msec(100);
-            forwards();
-            sleep_msec(100);
-            forwards();
-            sleep_msec(100);
-            forwards();
             //y = y - 1;
             //updateCoordinate(coordinateDetails, 1);
             right();
@@ -1165,6 +1081,7 @@ void yminus_direction_movement() {
     } else {
         updateCoordinate(coordinateDetails, 1);
         backwards2();
+        sleep_msec(100);
         //checkUnexploredRegionDownwardsHill();
         //checkUnexploredRegionDownwardsCliff();
         left();
