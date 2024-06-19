@@ -392,9 +392,9 @@ int getIRValues(const adc_channel_t channel) {
             int ir_sensor_input = adc_read_channel_raw(channel);
 
             if (channel == ADC4) {
-                senseVal = 595;
+                senseVal = 385;
             } else {
-                senseVal = 300;
+                senseVal = 250;
             }
 
             if (ir_sensor_input < senseVal) {
@@ -690,7 +690,7 @@ void backwardsmain() {
 
 void backwards2() {
   stepper_set_speed(-3072, -3072);
-  stepper_steps(450, 450); //CAN BE MODIFIED
+  stepper_steps(550, 550); //CAN BE MODIFIED
   while (!stepper_steps_done()) {}; //Wait for stepper steps to finish
 }
 
@@ -1127,9 +1127,9 @@ int main(void) {
     setupDistanceSensors();
     setupCommunication();
     
-    while (START != true) {
-        recieveData();
-    }
+    //while (START != true) {
+        //recieveData();
+    //}
 
     printf("Robot sterted!\n");
     alg(); //RUN THE DESIRED ALGORITHM
