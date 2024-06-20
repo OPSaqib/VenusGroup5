@@ -418,7 +418,7 @@ int getIRValues(const adc_channel_t channel) {
                 }
 
             } else { //channel is ADC4 (right IR Sensor)
-                senseVal = 390;
+                senseVal = 405;
             }
 
             if (ir_sensor_input < senseVal) {
@@ -718,7 +718,7 @@ void backwardsmain() {
 
 void backwards2() {
   stepper_set_speed(-3072, -3072);
-  stepper_steps(550, 550); //CAN BE MODIFIED
+  stepper_steps(800, 800); //CAN BE MODIFIED
   while (!stepper_steps_done()) {}; //Wait for stepper steps to finish
 }
 
