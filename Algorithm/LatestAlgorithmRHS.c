@@ -29,6 +29,12 @@ int red = 0;
 int blue = 0;
 int green = 0;
 
+//0 means avoided nothing, 1 means avoided something
+int avoid = 0;
+
+//0 means not done, 1 means done
+int smallblockdone = 0;
+
 //DistanceSensor init:
 extern int vl53l0x_example_dual();
 vl53x sensorA;
@@ -41,8 +47,8 @@ int distanceSensorB = 0;
 //
 
 //IR init:
-#define IR_SENSOR_PINA ADC4
-#define IR_SENSOR_PINB ADC5
+#define IR_SENSOR_PINA ADC5
+#define IR_SENSOR_PINB ADC4
 #define NUMBER_IR_VALUES 1
 #define BLACK 0
 #define WHITE 1
@@ -370,7 +376,9 @@ ir_val *freeNode(ir_val *head){
   return next;
 }
 
-int senseVal;
+int senseVal = 400;
+
+int prevADC4val = 300;
 
 int getIRValues(const adc_channel_t channel) {
     printf("Entered loop\n");
@@ -391,10 +399,26 @@ int getIRValues(const adc_channel_t channel) {
         if (elapsed_time >= DELAY) {
             int ir_sensor_input = adc_read_channel_raw(channel);
 
-            if (channel == ADC4) {
-                senseVal = 385;
-            } else {
-                senseVal = 250;
+            if (ir_sensor_input > 1000) {
+                prevADC4val = 200;
+
+                while (ir_sensor_input > 1000) {
+                    ir_sensor_input = adc_read_channel_raw(channel);
+                }
+            }
+
+            if (channel == ADC5) {
+                
+                //if previous was white then set it up properly
+
+                if (avoid == 1) {
+                    senseVal = 300;
+                } else { //didnt avoid anything use previous value
+                    senseVal = prevADC4val - 75;
+                }
+
+            } else { //channel is ADC4 (right IR Sensor)
+                senseVal = 390;
             }
 
             if (ir_sensor_input < senseVal) {
@@ -403,6 +427,10 @@ int getIRValues(const adc_channel_t channel) {
             } else {
                 printf("White %d\n", ir_sensor_input);
                 ir_avg += WHITE;
+
+                if (channel == ADC5) {
+                    prevADC4val = ir_sensor_input;
+                }
             }
 
             curr_index_IR_VALUES++;
@@ -805,7 +833,7 @@ char* investigateCoordinate() {
     updateIRSensorA();
     updateIRSensorB();
 
-    if (distanceSensorA <= 220 && distanceSensorA != 0) {
+    if (distanceSensorA <= 190 && distanceSensorA != 0) {
         strcpy(result, "Hill");
     } 
     else if (IRSensorA == 0 && IRSensorB == 0) {
@@ -828,19 +856,21 @@ char* investigateCoordinate() {
             strcpy(result, "6x6BlockRed");
         }
     }
-    else if (distanceSensorB <= 46) {
+    else if (distanceSensorB <= 45 && smallblockdone == 0) {
         if (red < 70 && green < 70 && blue < 70) {
-            strcpy(result, "3x3BlockGreen");
+            strcpy(result, "3x3BlockBlue");
         }
         else if (red < 110 && blue < 110 && green < 110) {
-            strcpy(result, "3x3BlockGreen");
+            strcpy(result, "3x3BlockBlue");
         }
         //else if (green > 100 && blue < 120) {
             //strcpy(result, "3x3BlockGreen");
         //} 
         else {
-            strcpy(result, "3x3BlockGreen");
+            strcpy(result, "3x3BlockBlue");
         }
+
+        smallblockdone = 1;
     }
     else {
         strcpy(result, "Nothing");
@@ -956,6 +986,7 @@ void yplus_direction_movement() {
     if (strcmp(coordinateDetails, "Nothing") == 0) {
         updateCoordinate(coordinateDetails, 0);
         forward_y_increasing();
+        avoid = 0;
         yplus_direction_movement();
     }
     else if ((strcmp(coordinateDetails, "3x3BlockRed") == 0) || (strcmp(coordinateDetails, "3x3BlockBlue") == 0) 
@@ -992,12 +1023,13 @@ void yplus_direction_movement() {
             sleep_msec(100);
             y = y + 1;
             //updateCoordinate("Nothing", 0);
-            
+            avoid = 1;
             yplus_direction_movement(); //continue with forward movement
     } else if (strcmp(coordinateDetails, "lastmovement") == 0) {
         sendmaxCoordinates();
         //robot_finished();
         printf("Entered LastMovement part\n");
+        avoid = 0;
         robot_finished();
         //turn right
         //turn right
@@ -1024,6 +1056,7 @@ void yplus_direction_movement() {
         sleep_msec(100);
         y = y - 1;
         //updateCoordinate(coordinateDetails, 0);
+        avoid = 1;
         yminus_direction_movement();
     }
 }
@@ -1034,6 +1067,7 @@ void yminus_direction_movement() {
     if (strcmp(coordinateDetails, "Nothing") == 0) {
         updateCoordinate(coordinateDetails, 1);
         forward_y_decreasing();
+        avoid = 0;
         yminus_direction_movement();
     } else if ((strcmp(coordinateDetails, "3x3BlockRed") == 0) || (strcmp(coordinateDetails, "3x3BlockBlue") == 0) 
         || (strcmp(coordinateDetails, "3x3BlockGreen") == 0) || (strcmp(coordinateDetails, "3x3BlockWhite") == 0)
@@ -1076,6 +1110,7 @@ void yminus_direction_movement() {
                 y = y - 1;
             }
 
+            avoid = 1;
             //updateCoordinate(coordinateDetails, 1);
             yminus_direction_movement(); //continue with (backwards) movement
     } else {
@@ -1102,6 +1137,8 @@ void yminus_direction_movement() {
         left();
         sleep_msec(100);
         y = y + 1;
+
+        avoid = 1;
         //updateCoordinate(coordinateDetails, 1);
         yplus_direction_movement();
     }
