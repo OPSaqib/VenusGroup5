@@ -844,33 +844,30 @@ char* investigateCoordinate() {
         strcpy(result, "TapeOrCliff");
     }
     else if (distanceSensorB <= 31) {
-        if (red < 65 && green < 65 && blue < 65) {
-            strcpy(result, "6x6BlockRed"); //should be White
-        }
-        else if (blue > 100) {
-            strcpy(result, "6x6BlockRed"); //should be Blue
-        }
-        else if (green > 100) {
-            strcpy(result, "6x6BlockRed"); //should be Green
-        } else {
+        if (red > 100 && green < 100 && blue < 100) {
             strcpy(result, "6x6BlockRed");
         }
+        else if (red < 100 && green > 100 && blue < 100) {
+            strcpy(result, "6x6BlockGreen");
+        }
+        else if (red < 100 && green > 100 && blue > 100) {
+            strcpy(result, "6x6BlockBlue");
+        } else {
+            strcpy(result, "6x6BlockBlack");
+        }
     }
-    else if (distanceSensorB <= 45 && smallblockdone == 0) {
-        if (red < 70 && green < 70 && blue < 70) {
-            strcpy(result, "3x3BlockBlue");
+    else if (distanceSensorB <= 45) {
+        if (red > 100 && green < 100 && blue < 100) {
+            strcpy(result, "3x3BlockRed");
         }
-        else if (red < 110 && blue < 110 && green < 110) {
-            strcpy(result, "3x3BlockBlue");
+        else if (red < 100 && green > 100 && blue < 100) {
+            strcpy(result, "3x3BlockGreen");
         }
-        //else if (green > 100 && blue < 120) {
-            //strcpy(result, "3x3BlockGreen");
-        //} 
-        else {
+        else if (red < 100 && green > 100 && blue > 100) {
             strcpy(result, "3x3BlockBlue");
+        } else {
+            strcpy(result, "3x3BlockBlack");
         }
-
-        smallblockdone = 1;
     }
     else {
         strcpy(result, "Nothing");
@@ -1117,8 +1114,8 @@ void yminus_direction_movement() {
         updateCoordinate(coordinateDetails, 1);
         backwards2();
         sleep_msec(100);
-        //checkUnexploredRegionDownwardsHill();
-        //checkUnexploredRegionDownwardsCliff();
+        checkUnexploredRegionDownwardsHill();
+        checkUnexploredRegionDownwardsCliff();
         left();
         sleep_msec(100);
         x = x + 1;
@@ -1164,9 +1161,9 @@ int main(void) {
     setupDistanceSensors();
     setupCommunication();
     
-    //while (START != true) {
-        //recieveData();
-    //}
+    while (START != true) {
+        recieveData();
+    }
 
     printf("Robot sterted!\n");
     alg(); //RUN THE DESIRED ALGORITHM
