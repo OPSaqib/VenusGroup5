@@ -446,15 +446,6 @@ int getIRValues(const adc_channel_t channel) {
         printf("AVERAGE = WHITE %d\n\n", ir_avg);
         return 1;
     }
-
-    // After saving n values from the sensor display the average
-    //if (ir_avg < NUMBER_IR_VALUES / 2) {
-        //printf("AVERAGE = BLACK %d\n\n", ir_avg);
-        //return 0;
-    //} else {
-        //printf("AVERAGE = WHITE %d\n\n", ir_avg);
-        //return 1;
-    //}
 }
 
 //NOTE: 0 IS BLACK AND 1 IS WHITE
